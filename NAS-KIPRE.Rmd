@@ -1,0 +1,198 @@
+---
+title: "Need Assessment Analysis"
+author: "Patrick Mwaura"
+date: "2025-10-12"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readr)
+library(janitor)
+library(scales)
+library(RColorBrewer)
+
+NAS_KIPRE_Clean <- read.csv("E:/DSAS/NAS-KIPRE Clean.csv")
+
+
+```
+
+## 
+
+```{r}
+
+table_directorate <- NAS_KIPRE_Clean %>%
+  tabyl(Directorate) %>%
+  arrange(desc(n)) %>%
+  adorn_totals("row") %>%
+  adorn_pct_formatting()
+
+table_directorate
+
+```
+
+```{r}
+
+table_roles <- NAS_KIPRE_Clean %>%
+  tabyl(Role_position) %>%
+  arrange(desc(n)) %>%
+  adorn_totals("row") %>%
+  adorn_pct_formatting()
+
+table_rol
+
+
+
+
+```
+
+```{r}
+table_roles <- NAS_KIPRE_Clean %>%
+  tabyl(Role_position) %>%
+  arrange(desc(n)) %>%
+  adorn_totals("row") %>%
+  adorn_pct_formatting()
+
+table_roles
+```
+
+```{r}
+
+
+# Select the columns
+d2 <- NAS_KIPRE_Clean %>% select(Data_Types, Software_used, Data.collection.tools.in.use, Databases)
+
+# Convert to long format
+all_long <- d2 %>%
+  mutate(ID = row_number()) %>%
+  pivot_longer(cols = -ID, names_to = "Category", values_to = "Item") %>%
+  separate_rows(Item, sep = ",\\s*") %>%
+  filter(Item != "" & Item != "None" & !is.na(Item))
+
+# Count frequency and calculate percentages within each category
+summary_counts <- all_long %>%
+  group_by(Category, Item) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  group_by(Category) %>%
+  mutate(Percent = Count / sum(Count) * 100) %>%
+  ungroup()
+
+#  Reorder items for plotting
+summary_counts <- summary_counts %>%
+  group_by(Category) %>%
+  arrange(Count, .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(Item = factor(Item, levels = unique(Item)))
+
+#  High-quality faceted horizontal bar chart with percentages
+ggplot(summary_counts, aes(x = Item, y = Count, fill = Category)) +
+  geom_col(width = 0.7, show.legend = FALSE) +
+  geom_text(aes(label = paste0(round(Percent,1), "%")), 
+            hjust = -0.1, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  facet_wrap(~Category, scales = "free_y") +
+  labs(title = "Overview of Respondent Data Practices",
+       x = "",
+       y = "Number of Respondents") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +  # add space for labels
+  theme_minimal(base_size = 12) +
+  theme(strip.text = element_text(face = "bold", size = 12),
+        axis.text.y = element_text(size = 10),
+        axis.text.x = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14, hjust = 0.5))
+
+# Save the plot
+ggsave("KIPRE_Data_Practices.png",      # file name (can use .pdf or .jpg)
+       plot = last_plot(),              # the last plot created
+       width = 12,                      # width in inches
+       height = 8,                      # height in inches
+       dpi = 300)                        # high-resolution
+
+```
+
+```{r}
+d3<- NAS_KIPRE_Clean %>% select(c(9:15))
+
+# Remove parentheses and convert to numeric for all columns
+d3_clean <- d3 %>%
+  mutate(across(everything(), ~ as.numeric(sub("\\(.*\\)", "", .))))
+
+# Create separate label sets for different types of columns
+quality_labels <- c("1"=" Very Poor", "2"="Poor", "3"="Fair", "4"="Good", "5"="Excellent")
+integrity_labels <- c("1"="Not Protected", "2"="Low", "3"="Moderate", "4"="High", "5"="Very High")
+
+# Convert columns to factors with appropriate labels
+d3_factor <- d3_clean %>%
+  mutate(
+    Accuracy = factor(Accuracy, levels = 1:5, labels = quality_labels),
+    Completeness = factor(Completeness, levels = 1:5, labels = quality_labels),
+    Consistency = factor(Consistency, levels = 1:5, labels = quality_labels),
+    Reliability = factor(Reliability, levels = 1:5, labels = quality_labels),
+    Data_Integrity = factor(Data_Integrity, levels = 1:5, labels = integrity_labels),
+    Data_security = factor(Data_security, levels = 1:5, labels = integrity_labels),
+    Data_protection = factor(Data_protection, levels = 1:5, labels = integrity_labels)
+  )
+
+
+
+# Add a Type column based on the Dimension
+d3_long <- d3_factor %>%
+  pivot_longer(cols = everything(), names_to = "Dimension", values_to = "Rating") %>%
+  mutate(Type = case_when(
+    Dimension %in% c("Accuracy", "Completeness", "Consistency", "Reliability") ~ "Quality",
+    Dimension %in% c("Data_Integrity", "Data_security", "Data_protection") ~ "Integrity/Security"
+  )) %>%
+  group_by(Dimension, Type, Rating) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  group_by(Dimension) %>%
+  mutate(Percent = Count / sum(Count) * 100)
+
+
+ggplot(d3_long, aes(x = Dimension, y = Percent, fill = Rating)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_text(aes(label = paste0(round(Percent,1), "%")),
+            position = position_dodge(width = 0.8), vjust = -0.25, size = 3, color = "black") +
+  facet_wrap(~Type, scales = "free_x", nrow = 1) +  # side-by-side facets
+  scale_fill_manual(values = c(
+    # Quality palette
+    "Poor" = "#EFF3FF", "Fair" = "#BDD7E7", "Good" = "#6BAED6", "Excellent" = "#3182BD",
+    # Integrity/Security palette
+    "Not Protected" = "#A50F15", "Low" = "#FB6A4A", "Moderate" = "#FCAE91",
+    "High" = "#FDAE6B", "Very High" = "#FEE0D2"
+  )) +
+  labs(title = "Data Quality and Integrity/Security Ratings",
+       x = "Dimension",
+       y = "Percentage of Respondents") +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.title = element_blank(),
+    plot.title = element_text(face = "bold", size = 15, hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    strip.background = element_rect(fill = NA, color = "black", size = 1.2), # facet border
+    panel.border = element_blank()
+  )
+
+
+# Save the plot
+ggsave("KIPRE_quality_integrity.png",      # file name (can use .pdf or .jpg)
+       plot = last_plot(),              # the last plot created
+       width = 12,                      # width in inches
+       height = 8,                      # height in inches
+       dpi = 300)                        # high-resolution
+
+
+```
+
+```{r}
+d4<- NAS_KIPRE_Clean %>% select(c(15:18))
+d5<- NAS_KIPRE_Clean %>% select(c(19:22))
+
+d6<- NAS_KIPRE_Clean %>% select(c(23:28))
+
+d7<- NAS_KIPRE_Clean %>% select(c(29:31))
+
+
+
+```
