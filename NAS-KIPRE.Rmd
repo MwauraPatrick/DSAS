@@ -186,11 +186,167 @@ ggsave("KIPRE_quality_integrity.png",      # file name (can use .pdf or .jpg)
 ```
 
 ```{r}
-d4<- NAS_KIPRE_Clean %>% select(c(15:18))
-d5<- NAS_KIPRE_Clean %>% select(c(19:22))
+
+
+
+
+```
+
+```{r}
+
+
+d4<- NAS_KIPRE_Clean %>% select(c(16:18))
+
+
+# start from original clean selection
+d4 <- NAS_KIPRE_Clean %>% 
+  select(Analytical_outputs, Analytical_support, Data_utilization)
+
+# 1. clean the text and split Analytical_outputs into a list column
+d4_split <- d4 %>%
+  mutate(
+    Analytical_outputs = str_replace_all(Analytical_outputs, "\\s+", " "),
+    Analytical_outputs = str_trim(Analytical_outputs),
+    Analytical_outputs = str_split(Analytical_outputs, ",")
+  )
+
+# 2. pivot / unnest longer so each output gets its own row
+d4_long <- d4_split %>%
+  unnest_longer(Analytical_outputs) %>%      # expands the list column
+  mutate(Analytical_outputs = str_trim(Analytical_outputs)) %>%
+  filter(!is.na(Analytical_outputs), Analytical_outputs != "")
+
+
+support_util_table_pct <- support_util_table %>%
+adorn_percentages("row") %>%
+adorn_pct_formatting(digits = 1)
+
+support_util_table_pct
+
+
+
+
+# Cross table: Analytical_outputs by Analytical_support
+tab_counts <- tabyl(d4_long, Analytical_outputs, Analytical_support)
+
+# 1. Row percentages (within each Analytical_output)
+tab_row_pct <- adorn_percentages(tab_counts, "row") %>%
+adorn_pct_formatting(digits = 1)
+
+# 2. Column percentages (within each Analytical_support)
+tab_col_pct <- adorn_percentages(tab_counts, "col") %>%
+ adorn_pct_formatting(digits = 1)
+
+# 3. Overall percentages
+tab_tot_pct <- adorn_percentages(tab_counts, "all") %>%
+  adorn_pct_formatting(digits = 1)
+
+
+# Level of expertise, number of staff, and level of expertise
+
+
+
+
+
+
+
+
+
+
+```
+
+```{r}
+
+d5<- NAS_KIPRE_Clean %>% select(c(3,19:22))
+
+# Clean Level_of_expertise BEFORE summarising
+d5_clean <- d5 %>%
+  mutate(
+    Staff_of_number = as.numeric(na_if(Staff_of_number, "")),
+    Level_of_expertise = case_when(
+      Level_of_expertise == "" | is.na(Level_of_expertise) ~ "Beginner",
+      grepl("Beginner, Not trained", Level_of_expertise) ~ "Beginner",
+      TRUE ~ Level_of_expertise
+    )
+  )
+
+# Summarise by Division and Level of Expertise
+division_summary <- d5_clean %>%
+  group_by(Division_Section, Level_of_expertise) %>%
+  summarise(Total_staff = sum(Staff_of_number, na.rm = TRUE), .groups = "drop") %>%
+  arrange(Division_Section, desc(Total_staff))
+
+# Pivot wider
+division_summary_wide <- division_summary %>%
+  pivot_wider(
+    names_from = Level_of_expertise,
+    values_from = Total_staff,
+    values_fill = 0
+  )
+
+division_summary_wide
+
+
+
+
+
+```
+
+```{r}
+
+# Step 1: Clean the data
+training_data <- d5 %>%
+  select(Division_Section, Staff_on_data, Staff_of_number, Level_of_expertise, Training_needed) %>%
+  mutate(
+    Staff_of_number = as.numeric(na_if(Staff_of_number, "")),
+    Level_of_expertise = case_when(
+      Level_of_expertise == "" | is.na(Level_of_expertise) ~ "Beginner",
+      Level_of_expertise == "Beginner, Not trained as a department" ~ "Beginner",
+      TRUE ~ Level_of_expertise
+    )
+  )
+
+# Step 2: Split multiple trainings into separate rows
+training_data_split <- training_data %>%
+  mutate(Training_needed = str_split(Training_needed, ",\\s*")) %>%  # split by comma
+  unnest_longer(Training_needed) %>%                                 # unnest to long format
+  mutate(Training_needed = str_trim(Training_needed))                # remove extra spaces
+
+# Step 3: Aggregate total staff per Division, Expertise, Training type
+division_training_summary <- training_data_split %>%
+  group_by(Division_Section, Level_of_expertise, Training_needed) %>%
+  summarise(Total_staff = sum(Staff_of_number, na.rm = TRUE), .groups = "drop") %>%
+  arrange(Division_Section, Level_of_expertise, Training_needed)
+
+division_training_summary
+
+```
+
+```{}
+```
+
+```{r}
 
 d6<- NAS_KIPRE_Clean %>% select(c(23:28))
 
+```
+
+```{r}
+
+d6<- NAS_KIPRE_Clean %>% select(c(23:28))
+
+
+
+
+
+
+
+```
+
+```{}
+```
+
+```{r}
 d7<- NAS_KIPRE_Clean %>% select(c(29:31))
 
 
