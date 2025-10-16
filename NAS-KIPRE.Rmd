@@ -320,9 +320,52 @@ division_training_summary <- training_data_split %>%
 
 division_training_summary
 
-```
+# Step 1: Select relevant columns and clean
+training_data <- d5 %>%
+  select(Division_Section, Staff_of_number, Training_needed) %>%
+  mutate(
+    Staff_of_number = as.numeric(na_if(Staff_of_number, "")),
+    Staff_of_number = ifelse(is.na(Staff_of_number), 1, Staff_of_number) # assume 1 if missing
+  )
 
-```{}
+# Step 2: Split training column into separate rows
+training_long <- training_data %>%
+  mutate(Training_needed = str_split(Training_needed, ",\\s*")) %>%
+  unnest_longer(Training_needed) %>%
+  mutate(Training_needed = str_trim(Training_needed))
+
+# Step 3: Aggregate total staff per Division and Training Needed
+division_training_summary <- training_long %>%
+  group_by(Division_Section, Training_needed) %>%
+  summarise(Total_staff = sum(Staff_of_number, na.rm = TRUE), .groups = "drop")
+
+# Step 4: Plot - High quality
+p <- ggplot(division_training_summary, aes(x = Training_needed, y = Total_staff, fill = Division_Section)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), color = "black") +
+  coord_flip() +
+  labs(
+    title = "Training Needs by Division",
+    x = "Training Type",
+    y = "Number of Staff",
+    fill = "Division"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.y = element_text(size = 12),
+    axis.text.x = element_text(size = 12),
+    axis.title = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 12)
+  )
+
+# Step 5: Save as high-resolution PNG
+ggsave("Training_Needs_by_Division.png", plot = p, width = 14, height = 8, dpi = 300)
+
+# Optional: Save as PDF for publication
+ggsave("Training_Needs_by_Division.pdf", plot = p, width = 14, height = 8)
+
+
 ```
 
 ```{r}
@@ -336,19 +379,55 @@ d6<- NAS_KIPRE_Clean %>% select(c(23:28))
 d6<- NAS_KIPRE_Clean %>% select(c(23:28))
 
 
+# Column 1: Data_security_compliance_Challenges
+security_challenges_summary <- d6 %>%
+  separate_rows(Data_security_compliance_Challenges, sep = ", ") %>%
+  group_by(Data_security_compliance_Challenges) %>%
+  summarise(Total = n()) %>%
+  mutate(Percent = round(100 * Total / sum(Total), 1))
+
+security_challenges_summary
+
+# Column 2: Documented_policies_SOPs
+doc_policies_summary <- d6 %>%
+  group_by(Documented_policies_SOPs) %>%
+  summarise(Total = n()) %>%
+  mutate(Percent = round(100 * Total / sum(Total), 1))
 
 
+doc_policies_summary
+# Column 3: Awareness_of.Data.Sharing_policy
+awareness_policy_summary <- d6 %>%
+  group_by(Awareness_of.Data.Sharing_policy) %>%
+  summarise(Total = n()) %>%
+  mutate(Percent = round(100 * Total / sum(Total), 1))
+
+awareness_policy_summary
+# Column 4: Awareness.of_DPAct
+awareness_dpact_summary <- d6 %>%
+  group_by(Awareness.of_DPAct) %>%
+  summarise(Total = n()) %>%
+  mutate(Percent = round(100 * Total / sum(Total), 1))
+
+awareness_dpact_summary
+# Column 5: Doc_SOPs
+doc_sops_summary <- d6 %>%
+  group_by(Doc_SOPs) %>%
+  summarise(Total = n()) %>%
+  mutate(Percent = round(100 * Total / sum(Total), 1))
+doc_sops_summary
+# Column 6: Gaps_governance_security
+gaps_summary <- d6 %>%
+  separate_rows(Gaps_governance_security, sep = ", ") %>%
+  group_by(Gaps_governance_security) %>%
+  summarise(Total = n()) %>%
+  mutate(Percent = round(100 * Total / sum(Total), 1))
+
+gaps_summary
 
 
 
 ```
-
-```{}
-```
-
-```{r}
-d7<- NAS_KIPRE_Clean %>% select(c(29:31))
-
 
 
 ```
