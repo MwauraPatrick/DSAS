@@ -1,0 +1,26 @@
+AUTHOR=Yopa Daniele Sandra , Massom Douglas Mbang , Kiki Gbètogo Maxime , Sophie Ramde Wendkoaghenda , Fasine Sylvie , Thiam Oumou , Zinaba Lassane , Ngangue Patrice 
+
+TITLE=Barriers and enablers to the implementation of one health strategies in developing countries: a systematic review
+
+JOURNAL=Frontiers in Public Health
+
+VOLUME=Volume 11 - 2023
+
+YEAR=2023
+
+URL=https://www.frontiersin.org/journals/public-health/articles/10.3389/fpubh.2023.1252428
+
+DOI=10.3389/fpubh.2023.1252428
+
+ISSN=2296-2565
+
+ABSTRACT=One Health is a concept that establishes the link between humans, animals and the environment in a collaborative approach. Since One Health's inception, several interventions have been developed in many regions and countries worldwide to tackle complex health problems, including epidemics and pandemics. In the developed world, many collaborative platforms have been created with an international strategy to address issues specific or not to their environment. Unfortunately, there is a lack of synthesis on the challenges and opportunities Low and Middle-Income Countries (LMICs) face. Following The Preferred Reporting Elements for PRISMA Systematic Reviews and Meta-Analyses (PRISMA), we conducted a systematic review. We applied a search strategy to electronic bibliographic databases (PubMed, Embase, Global Health, Web of Science and CINAHL). We assessed the included articles' quality using the Mixed Methods Appraisal tool (MMAT). A total of 424 articles were initially identified through the electronic database search. After removing Supprimé: ssociate This is a provisional file, not the final typeset article duplicates (n = 68), 356 articles were screened for title and abstract, and 16 were retained for full-text screening. The identified barriers were the lack of political will, weak governance and lack of human, financial and logistics resources. Concerning the enablers, we listed the existence of a reference framework document for One Health activities, good coordination between the different sectors at the various levels, the importance of joint and multisectoral meetings that advocated the One Health approach and the Availability of funds and adequate resources coupled with the support of Technical and Financial partners. One Health strategy and interventions must be implemented widely to address the rising burden of emerging infectious diseases, zoonotic diseases, and antimicrobial resistance. Addressing those challenges and reinforcing the enablers to promote managing global health challenges is necessary. 1 a mis en forme : Surlignage a mis en forme : Surlignage a mis en forme : Surlignage
+
+
+
+
+Griffin T, Pabon-Rodriguez F, Ayodo G, Zhuang Y. Strengthening health information systems and inherent statistical outputs for improved malaria control and interventions in western Kenya. Front Epidemiol. 2025 Jun 19;5:1591261. doi: 10.3389/fepid.2025.1591261. PMID: 40612630; PMCID: PMC12222074.
+
+Milazzo A, Liu J, Multani P, Steele S, Hoon E, Chaber AL. One Health implementation: A systematic scoping review using the Quadripartite One Health Joint Plan of Action. One Health. 2025 Mar 2;20:101008. doi: 10.1016/j.onehlt.2025.101008. PMID: 40160937; PMCID: PMC11953970.
+
+Bukachi,Salome A. and Onono,Joshua and Onyango-Ouma,Washington and Onyango,Tonny and Jeptoo,Mosbei and Yussuf,Buke and Knight-Jones,Theo and Fevre,Eric and Richards,Shauna, onehealthcases.2024.0019, One Health Cases, doi:10.1079/onehealthcases.2024.0019, CABI, Opportunities, Gaps, and Challenges in the Implementation of the One Health Approach in Kenya, (2024)
