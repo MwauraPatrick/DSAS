@@ -1,0 +1,35 @@
+Data Science and Analytics Section
+a) Rationale
+The section is established to provide a wide range of advanced data science and analytics expertise,
+guidance, and support to researchers, research teams, and managers engaged in research studies within the
+institute.
+b)Functions
+The functions of the section are to:
+Assist in formulation, implementation and review of policies, strategies and guidelines on data
+analytics;
+Collect, analyze and interpret biological and health science data across multiple research entities in
+the institute.
+Support in the design, development, and reporting of research studies
+Undertake data safeguarding and management of databases, softwares and workflows
+Provide monitoring and evaluation services to all research projects undertaken within the
+institution.
+Collect, analyze and interpret biological and health science data across multiple research entities
+in the institute.
+Establish the ecological, epidemiological and natural history of a disease.
+Design, monitor and assess disease control programmes.
+Evaluate the effects of a disease, and analysis of the costs and economic benefits of alternative
+control programmes.
+Identify valuable data sources and automate collection processes.
+Perform research and analysis on all algorithms and coordinate with various teams and provide
+support to various research programs
+Assist scientists by providing effective analysis and feedback on all bioinformatics
+Provide training to community and analyze various genome sequencing projects for various
+research projects
+Manage all genomic and proteomic data and maintain knowledge on all scientific literature and
+prepare appropriate reports
+Design various new computational tools for bioinformatics and assemble and prepare data
+structures and determine an effective data analysis framework.(xvi) Build predictive models and machine-learning algorithms.
+Undertake model combinations through ensemble modeling.
+Analyze large amounts of information to discover disease trends and patterns
+Conduct capacity building and mentorships in biostatistics and modeling.
+Disseminate scientific findings through publications, conferences, seminars and workshops
