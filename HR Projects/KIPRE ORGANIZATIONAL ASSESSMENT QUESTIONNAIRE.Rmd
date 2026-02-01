@@ -1,0 +1,907 @@
+---
+title: "KIPRE ORGANIZATIONAL ASSESSMENT REPORT"
+subtitle: "Prepared by Patrick Mwaura (DSAS) for Stella Nyambariga, Head of HR"
+author: ""
+date: "2026-01-31"
+output: 
+  pdf_document:
+    latex_engine: pdflatex
+    toc: false
+    toc_depth: 2
+
+header-includes:
+  - \usepackage[table]{xcolor}
+  - \usepackage{multirow}
+  - \usepackage{textgreek}
+  - \usepackage{setspace}
+  - \onehalfspacing
+  - \usepackage{array}
+  - \usepackage{colortbl}
+  - \usepackage[pdfpagemode=UseNone,bookmarks=false,bookmarksopen=false,hidelinks]{hyperref}
+  - \hypersetup{pdfmenubar=false,pdftoolbar=false,pdfstartview={XYZ null null 0.9}}
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(googlesheets4)
+
+data_url <- "https://docs.google.com/spreadsheets/d/1NBwaMsitwMtKLmx0e8iGGe_zD_R6HTL0CpzgxwqHxN4/edit?resourcekey=&gid=857654031#gid=857654031"
+data <- read_sheet(data_url)
+
+
+## Key: rl-reporting lines, gov-governance, dm-decision making, hr-human resources,
+## admin-administration, compliance-compliance, dpa-data protection, discipline-discipline,
+names(data) <- c(
+  "timestamp", "email", "division", "job_title", "tenure", "employment_type",
+  "rl_clear", "rl_issues",
+  "rc_alignment", "rc_competency_deploy", "rc_mismatch_examples",
+  "gov_tor", "gov_selection", "gov_challenges",
+  "dm_efficiency", "dm_delays",
+  "hr_policy_clarity", "hr_policy_unfair", "hr_policy_examples",
+  "leave_management", "leave_errors", "admin_challenges",
+  "contract_received", "records_up_to_date", "compliance_gaps", "compliance_risks",
+  "performance_appraisal", "appraisal_linked_rewards", "training_opportunities", "skills_gaps",
+  "records_storage", "records_retrieval_issues", "records_issues",
+  "dpa_awareness", "dpo_exists", "data_security", "data_risks",
+  "discipline_level", "discipline_fairness",
+  "ethics_issues", "ethics_examples",
+  "communication_effectiveness", "info_timeliness", "feedback_mechanisms",
+  "staff_morale", "morale_factors",
+  "operational_efficiency", "operational_delays",
+  "kpi_use", "productivity_rating", "productivity_barriers",
+  "innovation_encouraged", "innovation_platforms", "research_resources", "innovation_constraints"
+)
+
+
+
+```
+
+\definecolor{softred}{RGB}{255,200,200}
+\definecolor{softyellow}{RGB}{255,255,200}
+\definecolor{softgreen}{RGB}{200,255,200}
+\definecolor{factorgray}{RGB}{220,220,220} 
+
+\section*{Executive Summary}
+
+The beginning of 2026 organisational assessment at KIPRE highlighted that staff experiences are shaped not just by policies on paper, but by how structures, processes, and leadership are felt in the daily work activities. Clear reporting lines and alignment of roles with competencies are seen to drive operational efficiency and productivity, while ambiguity reduced effectiveness. Governance clarity and timely decision-making strongly influenced morale and trust, with communication supporting but not replacing structural transparency. Fair and consistent HR policies underpinned the engagement and ethical behaviours, whereas perceived inequities were reported to weaken motivation. Administrative inefficiencies and fragmented records management were reported to be elevators of organisational risk and compliance uncertainty. Lastly, innovation was found to flourish when encouragement, platforms, training, and skill coverage converged, yet gaps in these areas limited potential. Overall, the findings showed that KIPRE’s performance is maximized when formal structures, policies, and resources are experienced as fair, clear, and enabling, a foundation that, if strengthened, can simultaneously boost morale, productivity, compliance confidence, and strategic innovation capacity. See Table \ref{tab:kipre_gap_analysis} for summary. 
+
+\setcounter{tocdepth}{2}
+\tableofcontents
+
+
+\begin{table}[ht]
+\centering
+\caption{Gap Analysis: KIPRE Organisational Assessment (Jan 2026)}
+\renewcommand{\arraystretch}{1.3} % more vertical space for readability
+\setlength{\tabcolsep}{8pt} % horizontal padding
+\rowcolors{2}{gray!15}{white} % alternating row colors
+
+\begin{tabular}{p{4cm} p{4cm} p{6cm}}
+\hline
+\rowcolor{gray!30} % header background
+\textbf{Domain / Aspect} & \textbf{Expected State} & \textbf{Observed State \& Impact} \\
+\hline
+\textbf{Organisational Clarity} & Clear reporting lines and roles aligned to skills; minimal ambiguity. & 28\% report unclear reporting lines; 16\% partially misaligned roles. Impact: Operational inefficiency, uneven productivity, project bottlenecks. \\
+\textbf{Governance} & Transparent committee structures with clear TORs; predictable and timely decision-making; effective internal communication. & Only 28\% perceive clear TORs; 44\% experience slow decision-making; communication uneven. Impact: Lower staff morale, reduced trust, slower approvals, potential disengagement. \\
+\textbf{HR Policies and Fairness} & Consistent, transparent HR policies that support discipline, morale, and engagement. & Only 24\% report clear policies; 44\% experience unfair practices. Impact: Staff frustration, weak engagement, erosion of trust, possible retention challenges. \\
+\textbf{Administrative Efficiency and Records} & Well-organised records (physical or electronic), minimal administrative delays, high compliance awareness, strong data security. & 76\% report administrative challenges; 64\% struggle with record organisation; 40\% experience retrieval issues; 76\% perceive data as insecure. Impact: Operational friction, compliance risks, vulnerability to legal or reputational issues. \\
+\textbf{Innovation and Research Environment} & Structured encouragement of innovation, accessible platforms, adequate training, minimal skills gaps. & 48\% feel innovation encouraged; 52\% access platforms; 16\% report adequate training; 96\% note skills gaps. Impact: Limited innovation uptake, reduced productivity, skill constraints limiting research performance. \\
+\hline
+\end{tabular}
+\label{tab:kipre_gap_analysis}
+\end{table}
+
+
+\newpage
+
+## Introduction
+
+Between 12th and 30th January 2026, the Kenya Institute of Primate Research (KIPRE) , through the HR office and assisted by the Data science and analytics section (DSAS), undertook an organisation-wide assessment to better understand how staff experience the Institute’s systems, structures, and ways of working. The exercise was motivated by a shared recognition that organisational performance is shaped not only by formal policies and structures, but also by how these are experienced in day-to-day practice.
+
+The assessment sought to surface both strengths and areas for improvement across critical domains, including governance, human resource management, administrative and compliance processes, operational effectiveness, and the environment for innovation and research. Staff at all levels were invited to participate, reflecting the view that meaningful organisational insight emerges when voices from across the institution are heard.
+
+Participation in the survey was entirely voluntary and discreet. Respondents, through the Google form used,  were assured no personal or identifying information would be collected and that their responses would not be used in any manner that could lead to bias, discrimination, or individual attribution. This assurance was intended to create a safe space for candid reflection and honest feedback.
+
+Following the close of the survey, the responses were analysed using descriptive and exploratory approaches, with the aim of understanding patterns rather than assigning blame. In particular, the analysis explored whether staff perceptions of organisational clarity, quality of governance, fairness and consistency in human resource practices, administrative efficiency, and support for innovation were related to staff morale, productivity, and operational effectiveness. These dimensions were examined because they sit at the intersection of institutional design and human experience, and together shape the Institute’s capacity to deliver on its mandate.
+
+To provide structure to this assessment, five guiding questions were formulated. These questions frame the analysis that follows and serve as lenses through which the survey findings are interpreted, with the ultimate goal of informing practical, evidence-based organisational improvement.
+
+### 1. To what extent is organisational clarity (reporting lines and role alignment) associated with operational efficiency and staff productivity?
+
+
+Organisational theory consistently emphasises that clarity of authority and alignment of roles with competencies are foundational to effective performance. At KIPRE, the empirical evidence strongly supports this principle. As shown in Table \ref{tab:org_perf_summary_colored_final4}, staff who report clear reporting lines overwhelmingly experience efficient operations, whereas ambiguity in reporting structures is associated with operational friction and inefficiency. This pattern is not marginal: where reporting lines are unclear, inefficiency dominates, suggesting that uncertainty over “who decides” and “who is accountable” directly disrupts day-to-day work.
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+
+prop.table(table(data$rl_clear))
+prop.table(table(data$rc_alignment))
+prop.table(table(data$rc_competency_deploy))
+
+
+prop.table(table(data$operational_efficiency))
+prop.table(table(data$productivity_rating))
+
+
+tab_rl_eff <- table(data$rl_clear, data$operational_efficiency)
+prop.table(tab_rl_eff, margin = 1)
+
+tab_role_prod <- table(data$rc_alignment, data$productivity_rating)
+prop.table(tab_role_prod, margin = 1)
+
+
+data$rl_clear<- factor(
+  data$rl_clear,
+  levels = c("No", "Somewhat", "Yes"),
+  ordered = TRUE
+)
+
+data$operational_efficiency<- factor(
+  data$operational_efficiency,
+  levels = c("Inefficient", "Efficient", "Very efficient"),
+  ordered = TRUE
+)
+
+
+data$rc_competency_deploy <- factor(
+  data$rc_competency_deploy,
+  levels = c("Rarely", "Sometimes", "Always"),
+  ordered = TRUE
+)
+
+data$productivity_rating <- factor(
+  data$productivity_rating,
+  levels = c("Low", "Moderate", "High"),
+  ordered = TRUE
+)
+
+
+
+rl_num  <- as.numeric(data$rl_clear)
+rc_num  <- as.numeric(data$rc_competency_deploy)
+eff_num <- as.numeric(data$operational_efficiency)
+prod_num <- as.numeric(data$productivity_rating)
+
+cor.test(rl_num, eff_num, method = "spearman")
+cor.test(rc_num, prod_num, method = "spearman")
+
+
+
+
+```
+
+
+
+
+\begin{table}[ht]
+\centering
+\caption{Organisational Clarity, Role Alignment, and Performance Outcomes at KIPRE (Jan 2026)}
+\renewcommand{\arraystretch}{1.3}
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lcccccc}
+\hline
+\rowcolor{gray!30}
+\textbf{Organisational Factor} & \textbf{Category} & \textbf{(\%)} & \multicolumn{3}{c}{\textbf{Performance Distribution (\%)}} & \textbf{rho} \\
+\hline
+\multirow{4}{*}{\cellcolor{factorgray}\textbf{Reporting Lines Clarity}} 
+  & \textbf{Labels} & -- & \cellcolor{softred}Inefficient & \cellcolor{softyellow}Efficient & \cellcolor{softgreen}Very Efficient & -- \\
+  & No & 12 & 67 & 0 & 33 & \multirow{3}{*}{\textbf{0.45*}} \\
+  & Somewhat & 16 & 50 & 50 & 0 &  \\
+  & Yes & 72 & 0 & 89 & 11 &  \\
+\hline
+\multirow{4}{*}{\cellcolor{factorgray}\textbf{Role Alignment with Skills}} 
+  & \textbf{Labels} & -- & \cellcolor{softred}Low & \cellcolor{softyellow}Moderate & \cellcolor{softgreen}High & -- \\
+  & No & 12 & 67 & 33 & 0 & \multirow{3}{*}{\textbf{0.52*}} \\
+  & Partly & 16 & 0 & 75 & 25 &  \\
+  & Yes & 72 & 6 & 72 & 22 &  \\
+\hline
+\multicolumn{7}{p{15cm}}{\textit{Note: Color coding indicates performance levels — red = low/inefficient, yellow = moderate/efficient, green = high/very efficient. *Spearman correlations are statistically significant (p < 0.05).}} \\
+\hline
+\end{tabular}
+\label{tab:org_perf_summary_colored_final4}
+\end{table}
+
+
+
+A similar dynamic is evident in the alignment between roles and skills. When staff perceive their roles as well matched to their competencies, productivity is markedly higher, with most respondents reporting moderate to high performance levels. Conversely, misalignment appears to constrain productivity, not necessarily due to lack of effort, but because staff are required to operate outside their comparative advantage. This is particularly consequential in a research environment, where effectiveness depends heavily on specialised expertise and efficient task allocation.
+
+The observed associations are not merely descriptive. The positive correlations between reporting line clarity and operational efficiency (rho = 0.45) and between role alignment and productivity (rho = 0.52) indicate moderate to strong relationships, reinforcing the conclusion that structural clarity has tangible performance consequences. In practical terms, this suggests that productivity challenges at KIPRE are not primarily driven by individual motivation, but by how organisational design enables, or constrains,staff to perform.
+
+These findings indicate that organisational clarity at KIPRE functions as a performance enabler rather than an administrative formality. Strengthening reporting structures and systematically aligning roles with skills would likely yield immediate gains in efficiency and productivity, without requiring additional staffing or resources. In this sense, improving structural clarity represents a high-impact, low-cost lever for institutional performance improvement.
+
+## 2. Are perceptions of governance quality and decision-making efficiency associated with staff morale and organisational trust?
+
+Table \ref{tab:governance_morale_descriptives} shows that staff perceptions of governance quality and decision-making efficiency at KIPRE are meaningfully associated with staff morale, a core component of organisational trust.
+
+
+
+% Define colors
+\definecolor{softred}{RGB}{255,200,200}
+\definecolor{softorange}{RGB}{255,220,180}
+\definecolor{softyellow}{RGB}{255,255,200}
+\definecolor{softgreen}{RGB}{200,255,200}
+\definecolor{factorgray}{RGB}{220,220,220} % for multirow factor cells
+
+\begin{table}[ht]
+\centering
+\caption{Governance Quality, Decision-Making Efficiency, and Staff Morale at KIPRE (Jan 2026)}
+\renewcommand{\arraystretch}{1.3}
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lcccc}
+\hline
+\rowcolor{gray!30}
+\textbf{Governance Factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Staff Morale Association} & \textbf{rho} \\
+\hline
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Committee TOR Clarity}} 
+ & \cellcolor{softred}No & 32 & \multirow{3}{*}{Positive} & \multirow{3}{*}{\cellcolor{softgreen}0.54*} \\
+ & \cellcolor{softyellow}Not sure & 40 &  &  \\
+ & \cellcolor{softgreen}Yes & 28 &  &  \\
+\hline
+\multirow{4}{*}{\cellcolor{factorgray}\textbf{Decision-Making Efficiency}} 
+ & \cellcolor{softred}Very slow & 20 & \multirow{4}{*}{Positive} & \multirow{4}{*}{\cellcolor{softgreen}0.57*} \\
+ & \cellcolor{softorange}Slow & 24 &  &  \\
+ & \cellcolor{softyellow}Efficient & 44 &  &  \\
+ & \cellcolor{softgreen}Very efficient & 12 &  &  \\
+\hline
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Internal Communication Effectiveness}} 
+ & \cellcolor{softred}Ineffective & 20 & \multirow{3}{*}{Weak positive} & \multirow{3}{*}{\cellcolor{softyellow}0.42} \\
+ & \cellcolor{softyellow}Effective & 64 &  &  \\
+ & \cellcolor{softgreen}Very effective & 16 &  &  \\
+\hline
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Staff Morale}} 
+ & \cellcolor{softred}Low & 36 & -- & -- \\
+ & \cellcolor{softyellow}Moderate & 60 &  &  \\
+ & \cellcolor{softgreen}High & 4 &  &  \\
+\hline
+\multicolumn{5}{p{14cm}}{\textit{Note: Proportions are based on staff responses (n = 25). Spearman rank correlations assess associations between governance perceptions and staff morale. * indicates statistical significance at p < 0.05.}} \\
+\hline
+\end{tabular}
+\label{tab:governance_morale_descriptives}
+\end{table}
+
+
+From a descriptive perspective, governance clarity appears uneven. Only 28% of staff report clear committee Terms of Reference, while 40% are unsure and 32% perceive no clarity at all. This uncertainty alone is telling: when a large share of staff cannot confidently say how committees are mandated or operate, governance legitimacy becomes fragile. In public research institutions like KIPRE, such ambiguity often translates into disengagement rather than compliance.
+
+Decision-making efficiency follows a similar pattern. While 56% of respondents describe decision-making as efficient or very efficient, a substantial 44% experience it as slow or very slow. This split reflects an institution where processes work for some staff but remain frustratingly opaque or delayed for others, conditions that tend to erode trust over time.
+
+The associational results strengthen this picture. Perceived committee TOR clarity is positively and significantly associated with staff morale (Spearman rho = 0.54), indicating that staff who understand governance structures are substantially more likely to report higher morale. An even stronger relationship is observed for decision-making efficiency (rho = 0.57), suggesting that how quickly and predictably decisions are made matters deeply for how staff feel about the organisation. These are not procedural effects; they are human ones.
+
+Internal communication effectiveness shows a weaker but still positive association with morale (rho = 0.42). While most staff rate communication as effective, the weaker correlation implies that communication alone cannot compensate for unclear authority or slow decisions. In other words, being informed does not fully offset the frustration of not being empowered or heard.
+
+Taken together, the table demonstrates that governance at KIPRE is not merely a compliance architecture. Where governance is clear and decisions are timely, staff morale, and by extension organisational trust, are visibly higher. Where clarity and efficiency are lacking, morale drops. This directly supports the insight that governance design at KIPRE is performance-relevant and trust-shaping, not just administrative.
+
+In practical terms, improving committee clarity and decision-making efficiency is likely to yield immediate morale gains, even before broader reforms are undertaken. The data suggest that staff are not disengaged by nature; they are responding rationally to how governance is experienced in their daily work.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# Load libraries
+library(dplyr)
+library(Hmisc)
+
+# Select relevant governance and morale variables
+gov_data <- data %>%
+  select(
+    gov_tor,                 # Committee TOR clarity
+    dm_efficiency,           # Decision-making efficiency
+    communication_effectiveness, # Internal communication
+    staff_morale             # Staff morale
+  )
+
+# ----------------------------
+# 1. Compute proportions
+# ----------------------------
+# Compute proportions (in %)
+prop_tables <- lapply(gov_data, function(x) {
+  tbl <- table(x)
+  prop <- round(100 * tbl / sum(tbl), 1)   # convert counts to %
+  data.frame(Category = names(prop), Proportion = as.numeric(prop))
+})
+
+# Print
+prop_tables
+
+
+# ----------------------------
+# 2. Convert to numeric for Spearman correlation
+# ----------------------------
+gov_data_num <- gov_data %>%
+  mutate(
+    gov_tor_num = case_when(
+      gov_tor == "No" ~ 1,
+      gov_tor == "Not sure" ~ 2,
+      gov_tor == "Yes" ~ 3
+    ),
+    dm_efficiency_num = case_when(
+      dm_efficiency %in% c("Very slow", "Slow") ~ 1,
+      dm_efficiency == "Efficient" ~ 2,
+      dm_efficiency == "Very efficient" ~ 3
+    ),
+    comm_eff_num = case_when(
+      communication_effectiveness == "Ineffective" ~ 1,
+      communication_effectiveness == "Moderate" ~ 2,
+      communication_effectiveness == "Effective" ~ 3
+    ),
+    morale_num = case_when(
+      staff_morale == "Low" ~ 1,
+      staff_morale == "Moderate" ~ 2,
+      staff_morale == "High" ~ 3
+    )
+  ) %>%
+  select(gov_tor_num, dm_efficiency_num, comm_eff_num, morale_num)
+
+# ----------------------------
+# 3. Compute Spearman correlations
+# ----------------------------
+cor_results <- rcorr(as.matrix(gov_data_num), type = "spearman")
+
+# Correlation coefficients
+cor_results$r
+
+# P-values
+cor_results$P
+
+
+```
+
+
+
+
+
+
+## 3. Is perceived fairness and consistency of HR policies associated with staff morale, work ethic, and engagement?
+
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE,echo=FALSE}
+# Load necessary libraries
+library(dplyr)
+library(Hmisc)
+
+# ----------------------------
+# 1. Select relevant HR variables
+# ----------------------------
+hr_data <- data %>%
+  select(
+    hr_policy_clarity,    # HR policy clarity/consistency
+    hr_policy_unfair,     # Experience of unfair HR practices
+    discipline_level,     # Workplace discipline
+    staff_morale,         # Staff morale
+    feedback_mechanisms   # Feedback mechanisms
+  )
+
+# ----------------------------
+# 2. Compute proportions (%)
+# ----------------------------
+prop_hr <- lapply(hr_data, function(x) {
+  tbl <- table(x, useNA = "ifany")           # include missing values
+  prop <- round(100 * tbl / sum(tbl), 1)    # convert counts to %
+  data.frame(Category = names(prop), Proportion = as.numeric(prop))
+})
+
+# View the proportion tables
+prop_hr
+
+# ----------------------------
+# 3. Convert ordinal variables to numeric for Spearman correlations
+# ----------------------------
+hr_data_num <- hr_data %>%
+  mutate(
+    hr_clarity_num = case_when(
+      hr_policy_clarity %in% c("No") ~ 1,
+      hr_policy_clarity %in% c("Partly", "Somewhat") ~ 2,
+      hr_policy_clarity %in% c("Yes") ~ 3
+    ),
+    hr_unfair_num = case_when(
+      hr_policy_unfair == "Yes" ~ 1,
+      hr_policy_unfair == "Prefer not to say" ~ 2,
+      hr_policy_unfair == "No" ~ 3
+    ),
+    discipline_num = case_when(
+      discipline_level == "Weak" ~ 1,
+      discipline_level == "Moderate" ~ 2,
+      discipline_level == "Strong" ~ 3
+    ),
+    morale_num = case_when(
+      staff_morale == "Low" ~ 1,
+      staff_morale == "Moderate" ~ 2,
+      staff_morale == "High" ~ 3
+    ),
+    feedback_num = case_when(
+      feedback_mechanisms == "No" ~ 1,
+      feedback_mechanisms == "Sometimes" ~ 2,
+      feedback_mechanisms == "Yes" ~ 3
+    )
+  ) %>%
+  select(hr_clarity_num, hr_unfair_num, discipline_num, morale_num, feedback_num)
+
+# ----------------------------
+# 4. Compute Spearman correlations
+# ----------------------------
+cor_hr <- rcorr(as.matrix(hr_data_num), type = "spearman")
+
+# Correlation coefficients
+cor_hr$r
+
+# P-values
+cor_hr$P
+
+```
+
+
+
+
+Table~\ref{tab:hr_morale_descriptives} offers a detailed look into staff perceptions of HR policies at KIPRE and how these perceptions relate to morale, discipline, and engagement. A clear pattern emerges: staff who perceive HR policies as fair and consistent tend to report higher morale and a more positive work environment. Specifically, only 24% of staff feel HR policies are fully clear and consistent, while 44% perceive partial clarity and 32% report no clarity. Despite this, the overall association with morale is moderately positive (Spearman rho = 0.53), indicating that even incremental improvements in policy clarity can meaningfully bolster staff motivation and engagement.
+
+\begin{table}[ht]
+\centering
+\caption{HR Policy Perceptions, Staff Morale, Discipline, and Feedback Mechanisms at KIPRE (Jan 2026)}
+\renewcommand{\arraystretch}{1.3}
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lcccc}
+\hline
+\rowcolor{gray!30}
+\textbf{HR Factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Staff Morale Association} & \textbf{rho} \\
+\hline
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{HR Policy Clarity}} 
+ & \cellcolor{softred}No & 32 & \multirow{3}{*}{Moderate positive} & \multirow{3}{*}{\cellcolor{softgreen}0.53*} \\
+ & \cellcolor{softyellow}Partly & 44 &  &  \\
+ & \cellcolor{softgreen}Yes & 24 &  &  \\
+\hline
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Experience of Unfair HR Practices}} 
+ & \cellcolor{softred}Yes & 44 & \multirow{3}{*}{Weak negative} & \multirow{3}{*}{\cellcolor{softred}0.34} \\
+ & \cellcolor{softyellow}Prefer not to say & 24 &  &  \\
+ & \cellcolor{softgreen}No & 32 &  &  \\
+\hline
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Workplace Discipline}} 
+ & \cellcolor{softred}Weak & 20 & \multirow{3}{*}{Weak positive} & \multirow{3}{*}{\cellcolor{softyellow}0.35} \\
+ & \cellcolor{softyellow}Moderate & 56 &  &  \\
+ & \cellcolor{softgreen}Strong & 24 &  &  \\
+\hline
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Staff Morale}} 
+ & \cellcolor{softred}Low & 36 & -- & -- \\
+ & \cellcolor{softyellow}Moderate & 60 &  &  \\
+ & \cellcolor{softgreen}High & 4 &  &  \\
+\hline
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Feedback Mechanisms}} 
+ & \cellcolor{softred}No & 36 & \multirow{3}{*}{Weak positive} & \multirow{3}{*}{\cellcolor{softyellow}0.31} \\
+ & \cellcolor{softyellow}Limited & 4 &  &  \\
+ & \cellcolor{softgreen}Yes & 60 &  &  \\
+\hline
+\multicolumn{5}{p{14cm}}{\textit{Note: Proportions are based on staff responses (n = 25). Spearman rank correlations assess associations between HR perceptions and staff morale. * indicates statistical significance at p < 0.05. Red = adverse perception, yellow = intermediate, green = positive.}} \\
+\hline
+\end{tabular}
+\label{tab:hr_morale_descriptives}
+\end{table}
+
+
+Experiences of unfair HR practices are concerning. Nearly half of staff (44%) report experiencing unfair practices, with another 24% preferring not to disclose. These experiences correspond to a weak negative association with morale (rho = 0.34), suggesting that perceived inequities, whether overt or subtle, erode trust and may suppress discretionary effort, loyalty, and proactive engagement.
+
+Workplace discipline shows a nuanced relationship with staff morale. While the majority of staff (56%) rate discipline as moderate, only 24% report strong discipline and 20% weak. The weak positive correlation (rho = 0.35) implies that structured and fairly enforced discipline can support a culture of accountability, but overbearing or inconsistent discipline might have diminishing returns for motivation.
+
+Feedback mechanisms similarly play a modest but meaningful role. Sixty percent of staff acknowledge the existence of feedback channels, 36% report none, and 4% note an alternative option. The weak positive association with morale (rho = 0.31) highlights that when employees perceive opportunities to communicate concerns, ask questions, or suggest improvements, even informal mechanisms can reinforce engagement and psychological safety.
+
+Overall, the data paints a layered picture. HR fairness is foundational to morale, work ethic, and engagement: where clarity, consistency, and fair practice exist, staff are more motivated and disciplined. Conversely, uncertainty, lack of transparency, and perceived inequities compromise engagement, even when other structural supports exist. These findings underline the importance of strengthening HR policy communication, ensuring consistent application, and fostering safe channels for feedback. Doing so not only mitigates risks of disengagement but actively nurtures a more committed, responsible, and resilient workforce, reinforcing both the human and strategic capital of KIPRE.
+
+## 4. How does administrative efficiency and records management relate to compliance awareness and perceived organisational risk?
+
+Table~\ref{tab:admin_compliance_colored} synthesizes the state of administrative efficiency, records management, and compliance awareness at KIPRE, highlighting both operational bottlenecks and potential institutional risk exposures.
+
+A striking 76% of staff report experiencing administrative challenges, encompassing delays in approvals, payroll discrepancies, and inconsistent leave processing. This high administrative burden underscores not only inefficiency in back-office operations but also the potential for diminished staff morale and engagement, which can ripple across productivity and organisational performance.
+
+\begin{table}[ht]
+\centering
+\caption{Administrative Efficiency, Records Management, and Compliance Awareness at KIPRE (Jan 2026)}
+\begin{tabular}{lccc}
+\hline
+\rowcolor{gray!30}
+\textbf{Admin Factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Interpretation} \\
+\hline
+\rowcolor{red!10}
+Administrative Challenges & Delayed / Issues reported & 76 & High administrative burden \\
+\rowcolor{green!10}
+ & No challenge / None & 20 & Minimal challenges \\
+\rowcolor{yellow!10}
+ & N/A / Not sure & 16 & Unclear / ambiguous responses \\
+\hline
+\rowcolor{red!10}
+Records Storage & Mixed/Informal & 40 & Poor organisation \\
+\rowcolor{yellow!10}
+ & Poorly organised physical files & 24 & Moderate inefficiency \\
+\rowcolor{green!10}
+ & Well-organized / Electronic database & 36 & Efficient storage \\
+\hline
+\rowcolor{red!10}
+Records Retrieval & Yes (difficulty) & 40 & Staff experience challenges \\
+\rowcolor{green!10}
+ & No difficulty & 60 & Easy access to records \\
+\hline
+\rowcolor{yellow!10}
+Compliance Awareness & Unsure & 44 & Uncertainty on compliance gaps \\
+\rowcolor{green!10}
+ & No gaps & 32 & Confident in compliance \\
+\rowcolor{red!10}
+ & Yes, gaps exist & 24 & Recognised compliance risk \\
+\hline
+\rowcolor{red!10}
+Data Security & Not secure / Somewhat secure & 76 & High perceived risk \\
+\rowcolor{green!10}
+ & Very secure & 24 & Low perceived risk \\
+\hline
+\multicolumn{4}{p{14cm}}{\textit{Note: Percentages are based on staff responses (n = 25). Red = high concern / poor outcomes, Yellow = moderate, Green = positive outcome / low concern. Records retrieval difficulties are associated with uncertainty about compliance gaps. Overall, data security and administrative challenges indicate areas of institutional vulnerability.}}
+\end{tabular}
+\label{tab:admin_compliance_colored}
+\end{table}
+
+
+
+
+Records management reveals a dichotomous picture. While 36% of staff have access to well-organized or electronic storage systems, the remaining 64% grapple with informal or poorly structured filing. Notably, 40% experience difficulty retrieving records, which is closely associated with uncertainty in compliance awareness: 44% of staff are unsure whether the organisation meets regulatory or policy standards, and 24% report identifiable compliance gaps. This demonstrates a tangible link between operational inefficiency and heightened organisational risk, as inadequate record-keeping can compromise accountability and slow decision-making.
+
+Perceptions of data security amplify these concerns. A majority (76%) rate data as “not secure” or only “somewhat secure,” reflecting potential vulnerability to legal, financial, and reputational harm. Only a minority (24%) perceive data as very secure, suggesting that protective measures may be uneven or inadequately communicated across the institute.
+
+In sum, Table~\ref{tab:admin_compliance_colored} confirms that weaknesses in administrative processes and records management are systemic rather than isolated. These inefficiencies are closely linked to uncertainty around compliance and heightened perceived organisational risk. Addressing these issues through process streamlining, improved record organization, and targeted awareness interventions could reduce operational friction, strengthen compliance culture, and safeguard KIPRE’s institutional integrity.
+
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+library(dplyr)
+library(Hmisc)
+
+# Select administrative efficiency and compliance variables
+admin_data <- data %>%
+  select(
+    admin_challenges,        # Administrative challenges (Q20)
+    records_storage,         # Records storage difficulty (Q29)
+    records_retrieval_issues,# Records retrieval difficulty (Q30)
+    compliance_gaps,         # Awareness of compliance gaps (Q23)
+    data_security            # Perceived data security (Q34)
+  )
+
+# Compute proportions (%) for each variable
+prop_admin <- lapply(admin_data, function(x) {
+  tbl <- table(x, useNA = "ifany")
+  prop <- round(100 * tbl / sum(tbl), 1)
+  data.frame(Category = names(prop), Proportion = as.numeric(prop))
+})
+
+# View results
+prop_admin
+
+
+admin_data_num <- admin_data %>%
+  mutate(
+    admin_challenges_num = case_when(
+      admin_challenges == "No" ~ 1,
+      admin_challenges == "Some" ~ 2,
+      admin_challenges == "Yes" ~ 3
+    ),
+    records_storage_num = case_when(
+      records_storage == "Easy" ~ 1,
+      records_storage == "Moderate" ~ 2,
+      records_storage == "Difficult" ~ 3
+    ),
+    records_retrieval_num = case_when(
+      records_retrieval_issues == "No" ~ 1,
+      records_retrieval_issues == "Sometimes" ~ 2,
+      records_retrieval_issues == "Yes" ~ 3
+    ),
+    compliance_num = case_when(
+      compliance_gaps == "No" ~ 1,
+      compliance_gaps == "Unsure" ~ 2,
+      compliance_gaps == "Yes" ~ 3
+    ),
+    data_security_num = case_when(
+      data_security %in% c("Not secure", "Somewhat secure") ~ 1,
+      data_security == "Secure" ~ 2
+    )
+  ) %>%
+  select(admin_challenges_num, records_storage_num, records_retrieval_num,
+         compliance_num, data_security_num)
+# Spearman correlations
+cor_admin <- rcorr(as.matrix(admin_data_num), type = "spearman")
+
+# Correlation coefficients
+cor_admin$r
+
+# P-values
+cor_admin$P
+
+
+# Records retrieval difficulty vs compliance awareness
+table(admin_data$records_retrieval_issues, admin_data$compliance_gaps)
+prop.table(table(admin_data$records_retrieval_issues, admin_data$compliance_gaps), 1) * 100
+
+
+
+
+```
+
+
+
+
+## 5. Is the innovation and research environment associated with skills development, productivity, and perceived organisational performance?
+
+Table~\ref{tab:innovation_env_summary_colored} provides a comprehensive snapshot of KIPRE’s innovation environment and its relationship to skills development and perceived productivity.
+
+Nearly half of staff (48%) report that innovation is actively encouraged, while 44% perceive only partial encouragement, and 8% feel there is none. This pattern aligns with productivity: staff experiencing active encouragement report higher productivity, whereas limited encouragement coincides with lower productivity levels. Although the Spearman correlation is modest (rho = 0.093), the positive direction suggests that fostering innovation may incrementally improve performance.
+
+\begin{table}[ht]
+\centering
+\caption{Innovation Environment, Training, Skills Gaps, and Productivity at KIPRE (Jan 2026)}
+\begin{tabular}{lcccccc}
+\hline
+\textbf{Innovation Factor} & \textbf{Category} & \textbf{(\%)} & \cellcolor{red!30}Low & \cellcolor{yellow!30}Moderate & \cellcolor{green!30}High & \textbf{rho} \\
+\hline
+\rowcolor{blue!10}
+\multirow{3}{*}{Innovation Encouraged} 
+  & No & 8 & 50.0 & 50.0 & 0.0 & \multirow{3}{*}{0.093} \\
+  & To some extent & 44 & 0.0 & 81.8 & 18.2 &  \\
+  & Yes & 48 & 16.7 & 58.3 & 25.0 &  \\
+\hline
+\rowcolor{yellow!10}
+\multirow{3}{*}{Innovation Platforms} 
+  & No & 12 & 50.0 & 50.0 & 0.0 & \multirow{3}{*}{0.206} \\
+  & Not sure & 36 & 14.3 & 71.4 & 14.3 &  \\
+  & Yes & 52 & 8.0 & 68.0 & 24.0 &  \\
+\hline
+\rowcolor{blue!10}
+\multirow{3}{*}{Training Adequacy} 
+  & No / Inadequate & 44 & 36.4 & 54.6 & 9.0 & \multirow{3}{*}{0.448} \\
+  & Occasionally / Partial & 40 & 10.0 & 70.0 & 20.0 &  \\
+  & Yes / Adequate & 16 & 0.0 & 50.0 & 50.0 &  \\
+\hline
+\rowcolor{yellow!10}
+\multirow{2}{*}{Skills Gaps} 
+  & Reported / Present & 96 & 12.5 & 68.8 & 18.7 & \multirow{2}{*}{0.441} \\
+  & None / Not reported & 4 & 0.0 & 100.0 & 0.0 &  \\
+\hline
+\multicolumn{7}{p{15cm}}{\textit{Note: Color coding indicates productivity levels — red = Low, yellow = Moderate, green = High. Alternating row colors highlight different innovation factors. Spearman correlations (rho) show the association of each innovation factor with productivity.}} \\
+\hline
+\end{tabular}
+\label{tab:innovation_env_summary_colored}
+\end{table}
+
+
+
+
+Access to formal innovation platforms appears slightly stronger: 52% confirm their existence, whereas 48% are unsure or perceive none. Productivity is again higher among those with platforms, reflected in a correlation of 0.206. This indicates that providing structured spaces for experimentation and knowledge sharing can tangibly influence staff performance.
+
+Training adequacy emerges as a critical lever. Only 16% of staff feel training is fully adequate, while 44% perceive inadequacy and 40% experience occasional or partial training. Correspondingly, staff with adequate training demonstrate the highest productivity, resulting in a correlation of 0.448. This highlights that structured capacity building directly supports individual and collective performance.
+
+Skills gaps are widespread: 96% of respondents identify competency gaps in their roles. These gaps closely align with productivity ratings (rho = 0.441), emphasizing that even in an innovation-friendly environment, human capital limitations can constrain output.
+
+Collectively, these results illustrate a multifaceted landscape of innovation at KIPRE, where productivity is shaped not only by encouragement and platforms but also by the adequacy of training and skill coverage. Structural inconsistencies and resource constraints interact with human-capital deficiencies, suggesting that interventions should be both systemic and targeted: expanding access to innovation platforms, embedding encouragement into daily practice, and prioritising skills development could meaningfully enhance organisational performance and strategic competitiveness.
+
+
+```{r, include=FALSE,echo=FALSE, message=FALSE, warning=FALSE}
+# Load necessary libraries
+library(dplyr)
+library(Hmisc)
+
+# ----------------------------
+# 1. Select relevant innovation variables
+# ----------------------------
+innovation_data <- data %>%
+  select(
+    innovation_encouraged,   # Q50: Innovation encouragement
+    innovation_platforms,    # Q51: Existence of innovation platforms
+    training_opportunities,  # Q27: Training adequacy
+    skills_gaps,             # Q28: Skills gaps
+    productivity_rating      # Q48: Perceived productivity
+  )
+
+# ----------------------------
+# 2. Compute proportions (%) for descriptive summary
+# ----------------------------
+prop_innovation <- lapply(innovation_data, function(x) {
+  tbl <- table(x, useNA = "ifany")          # Include NAs
+  prop <- round(100 * tbl / sum(tbl), 1)   # Percentages
+  data.frame(Category = names(prop), Proportion = as.numeric(prop))
+})
+
+# View proportion tables
+prop_innovation
+
+# ----------------------------
+# 3. Convert ordinal / categorical variables to numeric for Spearman correlations
+# ----------------------------
+innovation_data_num <- innovation_data %>%
+  mutate(
+    innovation_enc_num = case_when(
+      innovation_encouraged == "No" ~ 1,
+      innovation_encouraged == "To some extent" ~ 2,
+      innovation_encouraged == "Yes" ~ 3
+    ),
+    innovation_platforms_num = case_when(
+      innovation_platforms == "No" ~ 1,
+      innovation_platforms == "Not sure" ~ 2,
+      innovation_platforms == "Yes" ~ 3
+    ),
+    training_num = case_when(
+      training_opportunities %in% c("No", "Inadequate") ~ 1,
+      training_opportunities %in% c("Occasionally", "Partial") ~ 2,
+      training_opportunities %in% c("Yes", "Adequate") ~ 3
+    ),
+    skills_gaps_num = case_when(
+      grepl("not trained|lack", skills_gaps, ignore.case = TRUE) ~ 1,
+      TRUE ~ 2  # minimal or no gaps
+    ),
+    productivity_num = case_when(
+      productivity_rating == "Low" ~ 1,
+      productivity_rating == "Moderate" ~ 2,
+      productivity_rating == "High" ~ 3
+    )
+  ) %>%
+  select(innovation_enc_num, innovation_platforms_num, training_num,
+         skills_gaps_num, productivity_num)
+
+# ----------------------------
+# 4. Spearman correlations
+# ----------------------------
+cor_innovation <- rcorr(as.matrix(innovation_data_num), type = "spearman")
+
+# Correlation coefficients
+cor_innovation$r
+
+# P-values
+cor_innovation$P
+
+# ----------------------------
+# 5. Cross-tabulation: Productivity vs Innovation Encouragement
+# ----------------------------
+prod_vs_innov <- table(innovation_data$innovation_encouraged,
+                        innovation_data$productivity_rating)
+
+# Row-wise proportions (%)
+round(prop.table(prod_vs_innov, 1) * 100, 1)
+
+# ----------------------------
+# 6. Thematic synthesis (optional) of innovation constraints
+# ----------------------------
+# Extract constraints from open responses (Q53 / innovation_constraints)
+innovation_constraints <- data$innovation_constraints
+
+# Quick frequency table
+table(innovation_constraints)
+prop.table(table(innovation_constraints)) * 100
+
+```
+## 6. Gap Analysis Summary
+
+
+Based on the assessment, several deviations from what would be expected in an organisation like KIPRE, a research institute with a mandate for high-quality scientific output and operational excellence, emerge:
+
+### i. **Organisational clarity and role alignment**
+
+* **Expected:** Clear reporting lines and well-defined roles matching competencies, allowing efficient project execution and minimal bottlenecks.
+* **Observed:** 28% of staff report unclear reporting lines; 16% experience partial role alignment. This leads to inefficiencies and uneven productivity, which is atypical for a research institute that relies heavily on structured workflows and specialised expertise.
+
+
+
+### ii. **Governance and decision-making**
+
+* **Expected:** Transparent governance with clear committee TORs, timely and predictable decision-making, and open communication channels to support morale and institutional trust.
+* **Observed:** Only 28% of staff report clear TORs, 44% experience slow or very slow decision-making, and internal communication is uneven. For a scientific organisation, this level of ambiguity is higher than expected and can slow project approvals, grant submissions, and cross-team collaborations.
+
+
+
+### iii. **HR fairness and policy consistency**
+
+* **Expected:** Clear, consistently applied HR policies that reinforce morale, discipline, and engagement.
+* **Observed:** Only 24% perceive HR policies as fully clear, and 44% report experiencing unfair practices. Such inconsistencies can create frustration, reduce engagement, and compromise ethical standards—contrary to expectations in a mission-driven, professional research environment.
+
+
+
+### iv. **Administrative efficiency and compliance**
+
+* **Expected:** Well-organised records and administrative processes, ensuring compliance with institutional and regulatory requirements.
+* **Observed:** 76% of staff report administrative challenges, 64% struggle with record organisation, and 76% perceive data as insecure. For a research institute dealing with sensitive biological data, these inefficiencies are significant deviations from expected professional standards and pose potential legal and reputational risks.
+
+
+
+### v. **Innovation and research environment**
+
+* **Expected:** Systematic support for innovation through platforms, training, and skills development to maintain competitiveness in research outputs.
+* **Observed:** While innovation is encouraged for 48% of staff, only 16% feel training is adequate, and 96% identify skills gaps. This indicates that the institute’s support for innovation is uneven and limited by human-capital constraints, which is below what is typical for high-performing research organisations.
+
+
+
+**In summary:** KIPRE’s deviations are primarily **structural, procedural, and human-capital related**. While the institute has pockets of strong practice, the observed gaps—unclear reporting lines, inconsistent HR policies, administrative inefficiencies, and limited innovation support—are larger than expected for an organisation of its mandate and complexity. These gaps risk slowing research output, eroding staff morale, and undermining organisational trust if left unaddressed.
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Prepare data
+df_rl <- data %>%
+  select(rl_clear, operational_efficiency) %>%
+  filter(!is.na(rl_clear), !is.na(operational_efficiency)) %>%
+  group_by(rl_clear, operational_efficiency) %>%
+  summarise(n = n(), .groups='drop') %>%
+  group_by(rl_clear) %>%
+  mutate(percent = n / sum(n) * 100)
+
+# Plot
+ggplot(df_rl, aes(x=rl_clear, y=percent, fill=operational_efficiency)) +
+  geom_bar(stat="identity") +
+  scale_fill_manual(values=c("Inefficient"="pink", "Moderate"="lightyellow", "Efficient"="lightgreen")) +
+  labs(title="Operational Efficiency by Reporting Line Clarity",
+       x="Reporting Line Clarity", y="Percentage (%)",
+       fill="Efficiency") +
+  theme_minimal(base_size=12)
+
+```
+
+
+```{r}
+df_ra <- data %>%
+  select(rc_alignment, productivity_rating) %>%
+  filter(!is.na(rc_alignment), !is.na(productivity_rating)) %>%
+  group_by(rc_alignment, productivity_rating) %>%
+  summarise(n=n(), .groups='drop') %>%
+  group_by(rc_alignment) %>%
+  mutate(percent = n/sum(n)*100)
+
+ggplot(df_ra, aes(x=rc_alignment, y=percent, fill=productivity_rating)) +
+  geom_bar(stat="identity") +
+  scale_fill_manual(values=c("Low"="pink","Moderate"="lightyellow","High"="lightgreen")) +
+  labs(title="Productivity by Role Alignment with Skills",
+       x="Role Alignment", y="Percentage (%)",
+       fill="Productivity") +
+  theme_minimal(base_size=12)
+
+```
+
+```{r}
+df_hr <- data %>%
+  select(hr_policy_clarity, staff_morale) %>%
+  filter(!is.na(hr_policy_clarity), !is.na(staff_morale)) %>%
+  group_by(hr_policy_clarity, staff_morale) %>%
+  summarise(n=n(), .groups='drop') %>%
+  group_by(hr_policy_clarity) %>%
+  mutate(percent = n/sum(n)*100)
+
+ggplot(df_hr, aes(x=hr_policy_clarity, y=percent, fill=staff_morale)) +
+  geom_bar(stat="identity") +
+  scale_fill_manual(values=c("Low"="pink","Moderate"="lightyellow","High"="lightgreen")) +
+  labs(title="Staff Morale by HR Policy Clarity",
+       x="HR Policy Clarity", y="Percentage (%)",
+       fill="Staff Morale") +
+  theme_minimal(base_size=12)
+
+```
+
+```{r}
+df_gov <- data %>%
+  select(gov_tor, dm_efficiency, staff_morale) %>%
+  tidyr::pivot_longer(cols=c(gov_tor, dm_efficiency), names_to="Factor", values_to="Level") %>%
+  group_by(Factor, Level, staff_morale) %>%
+  summarise(n=n(), .groups='drop') %>%
+  group_by(Factor, Level) %>%
+  mutate(percent = n/sum(n)*100)
+
+ggplot(df_gov, aes(x=Level, y=Factor, fill=percent)) +
+  geom_tile(color="white") +
+  scale_fill_gradient(low="pink", high="lightgreen") +
+  labs(title="Staff Morale Distribution Across Governance Factors",
+       x="Factor Level", y="Governance Factor", fill="% of Staff") +
+  theme_minimal(base_size=12)
+
+```
+
+```{r}
+df_prod <- data %>%
+  select(rc_alignment, rl_clear, productivity_rating) %>%
+  mutate(prod_num = as.numeric(productivity_rating)) %>%
+  group_by(rc_alignment, rl_clear) %>%
+  summarise(mean_prod=mean(prod_num, na.rm=TRUE), .groups='drop')
+
+ggplot(df_prod, aes(x=mean_prod, y=interaction(rc_alignment, rl_clear))) +
+  geom_point(color="darkgreen", size=3) +
+  geom_segment(aes(x=0, xend=mean_prod, y=interaction(rc_alignment, rl_clear), yend=interaction(rc_alignment, rl_clear)), color="grey") +
+  labs(title="Mean Productivity by Role Alignment and Reporting Line",
+       x="Mean Productivity (1=Low, 3=High)", y="Category") +
+  theme_minimal(base_size=12)
+
+```
+
