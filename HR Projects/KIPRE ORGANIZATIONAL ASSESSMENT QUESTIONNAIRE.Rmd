@@ -1,6 +1,5 @@
 ---
 title: "KIPRE ORGANIZATIONAL ASSESSMENT REPORT"
-subtitle: "Prepared by Patrick Mwaura (DSAS) for Stella Nyambariga, Head of HR"
 author: ""
 date: "2026-01-31"
 output: 
@@ -19,6 +18,13 @@ header-includes:
   - \usepackage{colortbl}
   - \usepackage[pdfpagemode=UseNone,bookmarks=false,bookmarksopen=false,hidelinks]{hyperref}
   - \hypersetup{pdfmenubar=false,pdftoolbar=false,pdfstartview={XYZ null null 0.9}}
+  - \usepackage{titling}
+  - \pretitle{\begin{center}\LARGE\bfseries}
+  - \posttitle{\par\vspace{1em}
+    {\large Prepared by Mr. Patrick Mwaura (DSAS) \newline For \newline Mrs. Stella Nyambariga, Head of HR }\par\end{center}\vskip 7em}
+  - \preauthor{}\postauthor{}
+  - \predate{\begin{center}\large}\postdate{\par\end{center}}
+
 ---
 
 
@@ -66,6 +72,8 @@ names(data) <- c(
 \section*{Executive Summary}
 
 The beginning of 2026 organisational assessment at KIPRE highlighted that staff experiences are shaped not just by policies on paper, but by how structures, processes, and leadership are felt in the daily work activities. Clear reporting lines and alignment of roles with competencies are seen to drive operational efficiency and productivity, while ambiguity reduced effectiveness. Governance clarity and timely decision-making strongly influenced morale and trust, with communication supporting but not replacing structural transparency. Fair and consistent HR policies underpinned the engagement and ethical behaviours, whereas perceived inequities were reported to weaken motivation. Administrative inefficiencies and fragmented records management were reported to be elevators of organisational risk and compliance uncertainty. Lastly, innovation was found to flourish when encouragement, platforms, training, and skill coverage converged, yet gaps in these areas limited potential. Overall, the findings showed that KIPRE’s performance is maximized when formal structures, policies, and resources are experienced as fair, clear, and enabling, a foundation that, if strengthened, can simultaneously boost morale, productivity, compliance confidence, and strategic innovation capacity. See Table \ref{tab:kipre_gap_analysis} for summary. 
+
+\newpage
 
 \setcounter{tocdepth}{2}
 \tableofcontents
@@ -183,7 +191,7 @@ cor.test(rc_num, prod_num, method = "spearman")
 \begin{tabular}{lcccccc}
 \hline
 \rowcolor{gray!30}
-\textbf{Organisational factor} & \textbf{Category} & \textbf{(\%)} & \multicolumn{3}{c}{\textbf{Performance distribution (\%)}} & \textbf{rho} \\
+\textbf{Organisational factor} & \textbf{Category} & \textbf{(\%)} & \multicolumn{3}{c}{\textbf{Performance distribution (\%)}} & \textbf{$\rho$} \\
 \hline
 \multirow{4}{*}{\cellcolor{factorgray}\textbf{Reporting lines clarity}} 
   & \textbf{Labels} & -- & \cellcolor{softred}Inefficient & \cellcolor{softyellow}Efficient & \cellcolor{softgreen}Very efficient & -- \\
@@ -207,7 +215,7 @@ cor.test(rc_num, prod_num, method = "spearman")
 
 A similar dynamic is evident in the alignment between roles and skills. When staff perceive their roles as well matched to their competencies, productivity is markedly higher, with most respondents reporting moderate to high performance levels. Conversely, misalignment appears to constrain productivity, not necessarily due to lack of effort, but because staff are required to operate outside their comparative advantage. This is particularly consequential in a research environment, where effectiveness depends heavily on specialised expertise and efficient task allocation.
 
-The observed associations are not merely descriptive. The positive correlations between reporting line clarity and operational efficiency (rho = 0.45) and between role alignment and productivity (rho = 0.52) indicate moderate to strong relationships, reinforcing the conclusion that structural clarity has tangible performance consequences. In practical terms, this suggests that productivity challenges at KIPRE are not primarily driven by individual motivation, but by how organisational design enables, or constrains,staff to perform.
+The observed associations are not merely descriptive. The positive correlations between reporting line clarity and operational efficiency ($\rho$ = 0.45) and between role alignment and productivity ($\rho$ = 0.52) indicate moderate to strong relationships, reinforcing the conclusion that structural clarity has tangible performance consequences. In practical terms, this suggests that productivity challenges at KIPRE are not primarily driven by individual motivation, but by how organisational design enables, or constrains,staff to perform.
 
 These findings indicate that organisational clarity at KIPRE functions as a performance enabler rather than an administrative formality. Strengthening reporting structures and systematically aligning roles with skills would likely yield immediate gains in efficiency and productivity, without requiring additional staffing or resources. In this sense, improving structural clarity represents a high-impact, low-cost lever for institutional performance improvement.
 
@@ -232,7 +240,7 @@ Table \ref{tab:governance_morale_descriptives} shows that staff perceptions of g
 \begin{tabular}{lcccc}
 \hline
 \rowcolor{gray!30}
-\textbf{Governance factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Staff morale association} & \textbf{rho} \\
+\textbf{Governance factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Staff morale association} & \textbf{$\rho$} \\
 \hline
 \multirow{3}{*}{\cellcolor{factorgray}\textbf{Committee TOR clarity}} 
  & \cellcolor{softred}No & 32 & \multirow{3}{*}{Positive} & \multirow{3}{*}{\cellcolor{softgreen}0.54*} \\
@@ -266,9 +274,9 @@ From a descriptive perspective, governance clarity appears uneven. Only 28% of s
 
 Decision-making efficiency follows a similar pattern. While 56% of respondents describe decision-making as efficient or very efficient, a substantial 44% experience it as slow or very slow. This split reflects an institution where processes work for some staff but remain frustratingly opaque or delayed for others, conditions that tend to erode trust over time.
 
-The associational results strengthen this picture. Perceived committee TOR clarity is positively and significantly associated with staff morale (Spearman rho = 0.54), indicating that staff who understand governance structures are substantially more likely to report higher morale. An even stronger relationship is observed for decision-making efficiency (rho = 0.57), suggesting that how quickly and predictably decisions are made matters deeply for how staff feel about the organisation. These are not procedural effects; they are human ones.
+The associational results strengthen this picture. Perceived committee TOR clarity is positively and significantly associated with staff morale (Spearman $\rho$ = 0.54), indicating that staff who understand governance structures are substantially more likely to report higher morale. An even stronger relationship is observed for decision-making efficiency ($\rho$ = 0.57), suggesting that how quickly and predictably decisions are made matters deeply for how staff feel about the organisation. These are not procedural effects; they are human ones.
 
-Internal communication effectiveness shows a weaker but still positive association with morale (rho = 0.42). While most staff rate communication as effective, the weaker correlation implies that communication alone cannot compensate for unclear authority or slow decisions. In other words, being informed does not fully offset the frustration of not being empowered or heard.
+Internal communication effectiveness shows a weaker but still positive association with morale ($\rho$ = 0.42). While most staff rate communication as effective, the weaker correlation implies that communication alone cannot compensate for unclear authority or slow decisions. In other words, being informed does not fully offset the frustration of not being empowered or heard.
 
 Taken together, the table demonstrates that governance at KIPRE is not merely a compliance architecture. Where governance is clear and decisions are timely, staff morale, and by extension organisational trust, are visibly higher. Where clarity and efficiency are lacking, morale drops. This directly supports the insight that governance design at KIPRE is performance-relevant and trust-shaping, not just administrative.
 
@@ -353,7 +361,7 @@ cor_results$P
 
 
 
-```{r, include=FALSE, message=FALSE, warning=FALSE,echo=FALSE}
+```{r, include=F, message=FALSE, warning=FALSE,echo=FALSE}
 # Load necessary libraries
 library(dplyr)
 library(Hmisc)
@@ -431,7 +439,7 @@ cor_hr$P
 
 
 
-Table~\ref{tab:hr_morale_descriptives} offers a detailed look into staff perceptions of HR policies at KIPRE and how these perceptions relate to morale, discipline, and engagement. A clear pattern emerges: staff who perceive HR policies as fair and consistent tend to report higher morale and a more positive work environment. Specifically, only 24% of staff feel HR policies are fully clear and consistent, while 44% perceive partial clarity and 32% report no clarity. Despite this, the overall association with morale is moderately positive (Spearman rho = 0.53), indicating that even incremental improvements in policy clarity can meaningfully bolster staff motivation and engagement.
+Table~\ref{tab:hr_morale_descriptives} offers a detailed look into staff perceptions of HR policies at KIPRE and how these perceptions relate to morale, discipline, and engagement. A clear pattern emerges: staff who perceive HR policies as fair and consistent tend to report higher morale and a more positive work environment. Specifically, only 24% of staff feel HR policies are fully clear and consistent, while 44% perceive partial clarity and 32% report no clarity. Despite this, the overall association with morale is moderately positive (Spearman $\rho$ = 0.53), indicating that even incremental improvements in policy clarity can meaningfully bolster staff motivation and engagement.
 
 \begin{table}[ht]
 \centering
@@ -441,7 +449,7 @@ Table~\ref{tab:hr_morale_descriptives} offers a detailed look into staff percept
 \begin{tabular}{lcccc}
 \hline
 \rowcolor{gray!30}
-\textbf{HR Factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Staff morale association} & \textbf{rho} \\
+\textbf{HR Factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Staff morale association} & \textbf{$\rho$} \\
 \hline
 \multirow{3}{*}{\cellcolor{factorgray}\textbf{HR policy clarity}} 
  & \cellcolor{softred}No & 32 & \multirow{3}{*}{Moderate positive} & \multirow{3}{*}{\cellcolor{softgreen}0.53*} \\
@@ -475,11 +483,11 @@ Table~\ref{tab:hr_morale_descriptives} offers a detailed look into staff percept
 \end{table}
 
 
-Experiences of unfair HR practices are concerning. Nearly half of staff (44%) report experiencing unfair practices, with another 24% preferring not to disclose. These experiences correspond to a weak negative association with morale (rho = 0.34), suggesting that perceived inequities, whether overt or subtle, erode trust and may suppress discretionary effort, loyalty, and proactive engagement.
+Experiences of unfair HR practices are concerning. Nearly half of staff (44%) report experiencing unfair practices, with another 24% preferring not to disclose. These experiences correspond to a weak negative association with morale ($\rho$ = 0.34), suggesting that perceived inequities, whether overt or subtle, erode trust and may suppress discretionary effort, loyalty, and proactive engagement.
 
-Workplace discipline shows a nuanced relationship with staff morale. While the majority of staff (56%) rate discipline as moderate, only 24% report strong discipline and 20% weak. The weak positive correlation (rho = 0.35) implies that structured and fairly enforced discipline can support a culture of accountability, but overbearing or inconsistent discipline might have diminishing returns for motivation.
+Workplace discipline shows a nuanced relationship with staff morale. While the majority of staff (56%) rate discipline as moderate, only 24% report strong discipline and 20% weak. The weak positive correlation ($\rho$ = 0.35) implies that structured and fairly enforced discipline can support a culture of accountability, but overbearing or inconsistent discipline might have diminishing returns for motivation.
 
-Feedback mechanisms similarly play a modest but meaningful role. Sixty percent of staff acknowledge the existence of feedback channels, 36% report none, and 4% note an alternative option. The weak positive association with morale (rho = 0.31) highlights that when employees perceive opportunities to communicate concerns, ask questions, or suggest improvements, even informal mechanisms can reinforce engagement and psychological safety.
+Feedback mechanisms similarly play a modest but meaningful role. Sixty percent of staff acknowledge the existence of feedback channels, 36% report none, and 4% note an alternative option. The weak positive association with morale ($\rho$ = 0.31) highlights that when employees perceive opportunities to communicate concerns, ask questions, or suggest improvements, even informal mechanisms can reinforce engagement and psychological safety.
 
 Overall, the data paints a layered picture. HR fairness is foundational to morale, work ethic, and engagement: where clarity, consistency, and fair practice exist, staff are more motivated and disciplined. Conversely, uncertainty, lack of transparency, and perceived inequities compromise engagement, even when other structural supports exist. These findings underline the importance of strengthening HR policy communication, ensuring consistent application, and fostering safe channels for feedback. Doing so not only mitigates risks of disengagement but actively nurtures a more committed, responsible, and resilient workforce, reinforcing both the human and strategic capital of KIPRE.
 
@@ -620,14 +628,14 @@ prop.table(table(admin_data$records_retrieval_issues, admin_data$compliance_gaps
 
 Table~\ref{tab:innovation_env_summary_colored} provides a comprehensive snapshot of KIPRE’s innovation environment and its relationship to skills development and perceived productivity.
 
-Nearly half of staff (48%) report that innovation is actively encouraged, while 44% perceive only partial encouragement, and 8% feel there is none. This pattern aligns with productivity: staff experiencing active encouragement report higher productivity, whereas limited encouragement coincides with lower productivity levels. Although the Spearman correlation is modest (rho = 0.093), the positive direction suggests that fostering innovation may incrementally improve performance.
+Nearly half of staff (48%) report that innovation is actively encouraged, while 44% perceive only partial encouragement, and 8% feel there is none. This pattern aligns with productivity: staff experiencing active encouragement report higher productivity, whereas limited encouragement coincides with lower productivity levels. Although the Spearman correlation is modest ($\rho$ = 0.093), the positive direction suggests that fostering innovation may incrementally improve performance.
 
 \begin{table}[ht]
 \centering
 \caption{Innovation Environment, Training, Skills Gaps, and Productivity at KIPRE (Jan 2026)}
 \begin{tabular}{lcccccc}
 \hline
-\textbf{Innovation factor} & \textbf{Category} & \textbf{(\%)} & \cellcolor{red!30}Low & \cellcolor{yellow!30}Moderate & \cellcolor{green!30}High & \textbf{rho} \\
+\textbf{Innovation factor} & \textbf{Category} & \textbf{(\%)} & \cellcolor{red!30}Low & \cellcolor{yellow!30}Moderate & \cellcolor{green!30}High & \textbf{$\rho$} \\
 \hline
 \rowcolor{blue!10}
 \multirow{3}{*}{Innovation encouraged} 
@@ -652,7 +660,7 @@ Nearly half of staff (48%) report that innovation is actively encouraged, while 
   & Reported / Present & 96 & 12.5 & 68.8 & 18.7 & \multirow{2}{*}{0.441} \\
   & None / Not reported & 4 & 0.0 & 100.0 & 0.0 &  \\
 \hline
-\multicolumn{7}{p{15cm}}{\textit{Note: Color coding indicates productivity levels — red = Low, yellow = Moderate, green = High. Alternating row colors highlight different innovation factors. Spearman correlations (rho) show the association of each innovation factor with productivity.}} \\
+\multicolumn{7}{p{15cm}}{\textit{Note: Color coding indicates productivity levels — red = Low, yellow = Moderate, green = High. Alternating row colors highlight different innovation factors. Spearman correlations ($\rho$) show the association of each innovation factor with productivity.}} \\
 \hline
 \end{tabular}
 \label{tab:innovation_env_summary_colored}
@@ -665,7 +673,7 @@ Access to formal innovation platforms appears slightly stronger: 52% confirm the
 
 Training adequacy emerges as a critical lever. Only 16% of staff feel training is fully adequate, while 44% perceive inadequacy and 40% experience occasional or partial training. Correspondingly, staff with adequate training demonstrate the highest productivity, resulting in a correlation of 0.448. This highlights that structured capacity building directly supports individual and collective performance.
 
-Skills gaps are widespread: 96% of respondents identify competency gaps in their roles. These gaps closely align with productivity ratings (rho = 0.441), emphasizing that even in an innovation-friendly environment, human capital limitations can constrain output.
+Skills gaps are widespread: 96% of respondents identify competency gaps in their roles. These gaps closely align with productivity ratings ($\rho$ = 0.441), emphasizing that even in an innovation-friendly environment, human capital limitations can constrain output.
 
 Collectively, these results illustrate a multifaceted landscape of innovation at KIPRE, where productivity is shaped not only by encouragement and platforms but also by the adequacy of training and skill coverage. Structural inconsistencies and resource constraints interact with human-capital deficiencies, suggesting that interventions should be both systemic and targeted: expanding access to innovation platforms, embedding encouragement into daily practice, and prioritising skills development could meaningfully enhance organisational performance and strategic competitiveness.
 
@@ -805,7 +813,7 @@ Based on the assessment, several deviations from what would be expected in an or
 
 **In summary:** KIPRE’s deviations are primarily **structural, procedural, and human-capital related**. While the institute has pockets of strong practice, the observed gaps—unclear reporting lines, inconsistent HR policies, administrative inefficiencies, and limited innovation support—are larger than expected for an organisation of its mandate and complexity. These gaps risk slowing research output, eroding staff morale, and undermining organisational trust if left unaddressed.
 
-## 7. Examplary Visualisations
+## 7. Examplary visualisations
 
 ### Performance by reporting line clarity
 
