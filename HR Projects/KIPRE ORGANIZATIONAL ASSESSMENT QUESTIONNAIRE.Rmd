@@ -24,7 +24,7 @@ header-includes:
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 library(googlesheets4)
 
 data_url <- "https://docs.google.com/spreadsheets/d/1NBwaMsitwMtKLmx0e8iGGe_zD_R6HTL0CpzgxwqHxN4/edit?resourcekey=&gid=857654031#gid=857654031"
@@ -81,13 +81,13 @@ The beginning of 2026 organisational assessment at KIPRE highlighted that staff 
 \begin{tabular}{p{4cm} p{4cm} p{6cm}}
 \hline
 \rowcolor{gray!30} % header background
-\textbf{Domain / Aspect} & \textbf{Expected State} & \textbf{Observed State \& Impact} \\
+\textbf{Domain / Aspect} & \textbf{Expected state} & \textbf{Observed state \& impact} \\
 \hline
-\textbf{Organisational Clarity} & Clear reporting lines and roles aligned to skills; minimal ambiguity. & 28\% report unclear reporting lines; 16\% partially misaligned roles. Impact: Operational inefficiency, uneven productivity, project bottlenecks. \\
+\textbf{Organisational clarity} & Clear reporting lines and roles aligned to skills; minimal ambiguity. & 28\% report unclear reporting lines; 16\% partially misaligned roles. Impact: Operational inefficiency, uneven productivity, project bottlenecks. \\
 \textbf{Governance} & Transparent committee structures with clear TORs; predictable and timely decision-making; effective internal communication. & Only 28\% perceive clear TORs; 44\% experience slow decision-making; communication uneven. Impact: Lower staff morale, reduced trust, slower approvals, potential disengagement. \\
-\textbf{HR Policies and Fairness} & Consistent, transparent HR policies that support discipline, morale, and engagement. & Only 24\% report clear policies; 44\% experience unfair practices. Impact: Staff frustration, weak engagement, erosion of trust, possible retention challenges. \\
-\textbf{Administrative Efficiency and Records} & Well-organised records (physical or electronic), minimal administrative delays, high compliance awareness, strong data security. & 76\% report administrative challenges; 64\% struggle with record organisation; 40\% experience retrieval issues; 76\% perceive data as insecure. Impact: Operational friction, compliance risks, vulnerability to legal or reputational issues. \\
-\textbf{Innovation and Research Environment} & Structured encouragement of innovation, accessible platforms, adequate training, minimal skills gaps. & 48\% feel innovation encouraged; 52\% access platforms; 16\% report adequate training; 96\% note skills gaps. Impact: Limited innovation uptake, reduced productivity, skill constraints limiting research performance. \\
+\textbf{HR policies and fairness} & Consistent, transparent HR policies that support discipline, morale, and engagement. & Only 24\% report clear policies; 44\% experience unfair practices. Impact: Staff frustration, weak engagement, erosion of trust, possible retention challenges. \\
+\textbf{Administrative efficiency and Records} & Well-organised records (physical or electronic), minimal administrative delays, high compliance awareness, strong data security. & 76\% report administrative challenges; 64\% struggle with record organisation; 40\% experience retrieval issues; 76\% perceive data as insecure. Impact: Operational friction, compliance risks, vulnerability to legal or reputational issues. \\
+\textbf{Innovation and  Research  environment} & Structured encouragement of innovation, accessible platforms, adequate training, minimal skills gaps. & 48\% feel innovation encouraged; 52\% access platforms; 16\% report adequate training; 96\% note skills gaps. Impact: Limited innovation uptake, reduced productivity, skill constraints limiting research performance. \\
 \hline
 \end{tabular}
 \label{tab:kipre_gap_analysis}
@@ -183,15 +183,15 @@ cor.test(rc_num, prod_num, method = "spearman")
 \begin{tabular}{lcccccc}
 \hline
 \rowcolor{gray!30}
-\textbf{Organisational Factor} & \textbf{Category} & \textbf{(\%)} & \multicolumn{3}{c}{\textbf{Performance Distribution (\%)}} & \textbf{rho} \\
+\textbf{Organisational factor} & \textbf{Category} & \textbf{(\%)} & \multicolumn{3}{c}{\textbf{Performance distribution (\%)}} & \textbf{rho} \\
 \hline
-\multirow{4}{*}{\cellcolor{factorgray}\textbf{Reporting Lines Clarity}} 
-  & \textbf{Labels} & -- & \cellcolor{softred}Inefficient & \cellcolor{softyellow}Efficient & \cellcolor{softgreen}Very Efficient & -- \\
+\multirow{4}{*}{\cellcolor{factorgray}\textbf{Reporting lines clarity}} 
+  & \textbf{Labels} & -- & \cellcolor{softred}Inefficient & \cellcolor{softyellow}Efficient & \cellcolor{softgreen}Very efficient & -- \\
   & No & 12 & 67 & 0 & 33 & \multirow{3}{*}{\textbf{0.45*}} \\
   & Somewhat & 16 & 50 & 50 & 0 &  \\
   & Yes & 72 & 0 & 89 & 11 &  \\
 \hline
-\multirow{4}{*}{\cellcolor{factorgray}\textbf{Role Alignment with Skills}} 
+\multirow{4}{*}{\cellcolor{factorgray}\textbf{Role alignment with skills}} 
   & \textbf{Labels} & -- & \cellcolor{softred}Low & \cellcolor{softyellow}Moderate & \cellcolor{softgreen}High & -- \\
   & No & 12 & 67 & 33 & 0 & \multirow{3}{*}{\textbf{0.52*}} \\
   & Partly & 16 & 0 & 75 & 25 &  \\
@@ -226,31 +226,31 @@ Table \ref{tab:governance_morale_descriptives} shows that staff perceptions of g
 
 \begin{table}[ht]
 \centering
-\caption{Governance Quality, Decision-Making Efficiency, and Staff Morale at KIPRE (Jan 2026)}
+\caption{Governance Quality, Decision-making efficiency, and staff morale at KIPRE (Jan 2026)}
 \renewcommand{\arraystretch}{1.3}
 \setlength{\tabcolsep}{6pt}
 \begin{tabular}{lcccc}
 \hline
 \rowcolor{gray!30}
-\textbf{Governance Factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Staff Morale Association} & \textbf{rho} \\
+\textbf{Governance factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Staff morale association} & \textbf{rho} \\
 \hline
-\multirow{3}{*}{\cellcolor{factorgray}\textbf{Committee TOR Clarity}} 
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Committee TOR clarity}} 
  & \cellcolor{softred}No & 32 & \multirow{3}{*}{Positive} & \multirow{3}{*}{\cellcolor{softgreen}0.54*} \\
  & \cellcolor{softyellow}Not sure & 40 &  &  \\
  & \cellcolor{softgreen}Yes & 28 &  &  \\
 \hline
-\multirow{4}{*}{\cellcolor{factorgray}\textbf{Decision-Making Efficiency}} 
+\multirow{4}{*}{\cellcolor{factorgray}\textbf{Decision-making efficiency}} 
  & \cellcolor{softred}Very slow & 20 & \multirow{4}{*}{Positive} & \multirow{4}{*}{\cellcolor{softgreen}0.57*} \\
  & \cellcolor{softorange}Slow & 24 &  &  \\
  & \cellcolor{softyellow}Efficient & 44 &  &  \\
  & \cellcolor{softgreen}Very efficient & 12 &  &  \\
 \hline
-\multirow{3}{*}{\cellcolor{factorgray}\textbf{Internal Communication Effectiveness}} 
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Internal communication effectiveness}} 
  & \cellcolor{softred}Ineffective & 20 & \multirow{3}{*}{Weak positive} & \multirow{3}{*}{\cellcolor{softyellow}0.42} \\
  & \cellcolor{softyellow}Effective & 64 &  &  \\
  & \cellcolor{softgreen}Very effective & 16 &  &  \\
 \hline
-\multirow{3}{*}{\cellcolor{factorgray}\textbf{Staff Morale}} 
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Staff morale}} 
  & \cellcolor{softred}Low & 36 & -- & -- \\
  & \cellcolor{softyellow}Moderate & 60 &  &  \\
  & \cellcolor{softgreen}High & 4 &  &  \\
@@ -435,35 +435,35 @@ Table~\ref{tab:hr_morale_descriptives} offers a detailed look into staff percept
 
 \begin{table}[ht]
 \centering
-\caption{HR Policy Perceptions, Staff Morale, Discipline, and Feedback Mechanisms at KIPRE (Jan 2026)}
+\caption{HR Policy perceptions, staff morale, discipline, and feedback mechanisms at KIPRE (Jan 2026)}
 \renewcommand{\arraystretch}{1.3}
 \setlength{\tabcolsep}{6pt}
 \begin{tabular}{lcccc}
 \hline
 \rowcolor{gray!30}
-\textbf{HR Factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Staff Morale Association} & \textbf{rho} \\
+\textbf{HR Factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Staff morale association} & \textbf{rho} \\
 \hline
-\multirow{3}{*}{\cellcolor{factorgray}\textbf{HR Policy Clarity}} 
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{HR policy clarity}} 
  & \cellcolor{softred}No & 32 & \multirow{3}{*}{Moderate positive} & \multirow{3}{*}{\cellcolor{softgreen}0.53*} \\
  & \cellcolor{softyellow}Partly & 44 &  &  \\
  & \cellcolor{softgreen}Yes & 24 &  &  \\
 \hline
-\multirow{3}{*}{\cellcolor{factorgray}\textbf{Experience of Unfair HR Practices}} 
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Experience of unfair HR practices}} 
  & \cellcolor{softred}Yes & 44 & \multirow{3}{*}{Weak negative} & \multirow{3}{*}{\cellcolor{softred}0.34} \\
  & \cellcolor{softyellow}Prefer not to say & 24 &  &  \\
  & \cellcolor{softgreen}No & 32 &  &  \\
 \hline
-\multirow{3}{*}{\cellcolor{factorgray}\textbf{Workplace Discipline}} 
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Workplace discipline}} 
  & \cellcolor{softred}Weak & 20 & \multirow{3}{*}{Weak positive} & \multirow{3}{*}{\cellcolor{softyellow}0.35} \\
  & \cellcolor{softyellow}Moderate & 56 &  &  \\
  & \cellcolor{softgreen}Strong & 24 &  &  \\
 \hline
-\multirow{3}{*}{\cellcolor{factorgray}\textbf{Staff Morale}} 
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Staff morale}} 
  & \cellcolor{softred}Low & 36 & -- & -- \\
  & \cellcolor{softyellow}Moderate & 60 &  &  \\
  & \cellcolor{softgreen}High & 4 &  &  \\
 \hline
-\multirow{3}{*}{\cellcolor{factorgray}\textbf{Feedback Mechanisms}} 
+\multirow{3}{*}{\cellcolor{factorgray}\textbf{Feedback mechanisms}} 
  & \cellcolor{softred}No & 36 & \multirow{3}{*}{Weak positive} & \multirow{3}{*}{\cellcolor{softyellow}0.31} \\
  & \cellcolor{softyellow}Limited & 4 &  &  \\
  & \cellcolor{softgreen}Yes & 60 &  &  \\
@@ -491,21 +491,21 @@ A striking 76% of staff report experiencing administrative challenges, encompass
 
 \begin{table}[ht]
 \centering
-\caption{Administrative Efficiency, Records Management, and Compliance Awareness at KIPRE (Jan 2026)}
+\caption{Administrative efficiency, records management, and compliance awareness at KIPRE (Jan 2026)}
 \begin{tabular}{lccc}
 \hline
 \rowcolor{gray!30}
-\textbf{Admin Factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Interpretation} \\
+\textbf{Admin factor} & \textbf{Category} & \textbf{(\%)} & \textbf{Interpretation} \\
 \hline
 \rowcolor{red!10}
-Administrative Challenges & Delayed / Issues reported & 76 & High administrative burden \\
+Administrative challenges & Delayed / Issues reported & 76 & High administrative burden \\
 \rowcolor{green!10}
  & No challenge / None & 20 & Minimal challenges \\
 \rowcolor{yellow!10}
  & N/A / Not sure & 16 & Unclear / ambiguous responses \\
 \hline
 \rowcolor{red!10}
-Records Storage & Mixed/Informal & 40 & Poor organisation \\
+Records storage & Mixed/Informal & 40 & Poor organisation \\
 \rowcolor{yellow!10}
  & Poorly organised physical files & 24 & Moderate inefficiency \\
 \rowcolor{green!10}
@@ -517,14 +517,14 @@ Records Retrieval & Yes (difficulty) & 40 & Staff experience challenges \\
  & No difficulty & 60 & Easy access to records \\
 \hline
 \rowcolor{yellow!10}
-Compliance Awareness & Unsure & 44 & Uncertainty on compliance gaps \\
+Compliance awareness & unsure & 44 & uncertainty on compliance gaps \\
 \rowcolor{green!10}
  & No gaps & 32 & Confident in compliance \\
 \rowcolor{red!10}
- & Yes, gaps exist & 24 & Recognised compliance risk \\
+ & Yes, gaps exist & 24 & Recognized compliance risk \\
 \hline
 \rowcolor{red!10}
-Data Security & Not secure / Somewhat secure & 76 & High perceived risk \\
+Data security & Not secure / Somewhat secure & 76 & High perceived risk \\
 \rowcolor{green!10}
  & Very secure & 24 & Low perceived risk \\
 \hline
@@ -532,8 +532,6 @@ Data Security & Not secure / Somewhat secure & 76 & High perceived risk \\
 \end{tabular}
 \label{tab:admin_compliance_colored}
 \end{table}
-
-
 
 
 Records management reveals a dichotomous picture. While 36% of staff have access to well-organized or electronic storage systems, the remaining 64% grapple with informal or poorly structured filing. Notably, 40% experience difficulty retrieving records, which is closely associated with uncertainty in compliance awareness: 44% of staff are unsure whether the organisation meets regulatory or policy standards, and 24% report identifiable compliance gaps. This demonstrates a tangible link between operational inefficiency and heightened organisational risk, as inadequate record-keeping can compromise accountability and slow decision-making.
@@ -629,28 +627,28 @@ Nearly half of staff (48%) report that innovation is actively encouraged, while 
 \caption{Innovation Environment, Training, Skills Gaps, and Productivity at KIPRE (Jan 2026)}
 \begin{tabular}{lcccccc}
 \hline
-\textbf{Innovation Factor} & \textbf{Category} & \textbf{(\%)} & \cellcolor{red!30}Low & \cellcolor{yellow!30}Moderate & \cellcolor{green!30}High & \textbf{rho} \\
+\textbf{Innovation factor} & \textbf{Category} & \textbf{(\%)} & \cellcolor{red!30}Low & \cellcolor{yellow!30}Moderate & \cellcolor{green!30}High & \textbf{rho} \\
 \hline
 \rowcolor{blue!10}
-\multirow{3}{*}{Innovation Encouraged} 
+\multirow{3}{*}{Innovation encouraged} 
   & No & 8 & 50.0 & 50.0 & 0.0 & \multirow{3}{*}{0.093} \\
   & To some extent & 44 & 0.0 & 81.8 & 18.2 &  \\
   & Yes & 48 & 16.7 & 58.3 & 25.0 &  \\
 \hline
 \rowcolor{yellow!10}
-\multirow{3}{*}{Innovation Platforms} 
+\multirow{3}{*}{Innovation platforms} 
   & No & 12 & 50.0 & 50.0 & 0.0 & \multirow{3}{*}{0.206} \\
   & Not sure & 36 & 14.3 & 71.4 & 14.3 &  \\
   & Yes & 52 & 8.0 & 68.0 & 24.0 &  \\
 \hline
 \rowcolor{blue!10}
-\multirow{3}{*}{Training Adequacy} 
+\multirow{3}{*}{Training adequacy} 
   & No / Inadequate & 44 & 36.4 & 54.6 & 9.0 & \multirow{3}{*}{0.448} \\
   & Occasionally / Partial & 40 & 10.0 & 70.0 & 20.0 &  \\
   & Yes / Adequate & 16 & 0.0 & 50.0 & 50.0 &  \\
 \hline
 \rowcolor{yellow!10}
-\multirow{2}{*}{Skills Gaps} 
+\multirow{2}{*}{Skills gaps} 
   & Reported / Present & 96 & 12.5 & 68.8 & 18.7 & \multirow{2}{*}{0.441} \\
   & None / Not reported & 4 & 0.0 & 100.0 & 0.0 &  \\
 \hline
@@ -807,101 +805,346 @@ Based on the assessment, several deviations from what would be expected in an or
 
 **In summary:** KIPRE’s deviations are primarily **structural, procedural, and human-capital related**. While the institute has pockets of strong practice, the observed gaps—unclear reporting lines, inconsistent HR policies, administrative inefficiencies, and limited innovation support—are larger than expected for an organisation of its mandate and complexity. These gaps risk slowing research output, eroding staff morale, and undermining organisational trust if left unaddressed.
 
+## 7. Examplary Visualisations
 
-```{r}
+### Performance by reporting line clarity
+
+```{r,include=TRUE, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(dplyr)
+library(scales)
 
 # Prepare data
 df_rl <- data %>%
   select(rl_clear, operational_efficiency) %>%
   filter(!is.na(rl_clear), !is.na(operational_efficiency)) %>%
   group_by(rl_clear, operational_efficiency) %>%
-  summarise(n = n(), .groups='drop') %>%
+  summarise(n = n(), .groups = "drop") %>%
   group_by(rl_clear) %>%
-  mutate(percent = n / sum(n) * 100)
+  mutate(percent = n / sum(n) * 100) %>%
+  ungroup()
+
+# Ensure logical ordering
+df_rl$rl_clear <- factor(
+  df_rl$rl_clear,
+  levels = c("No", "Somewhat", "Yes")
+)
+
+df_rl$operational_efficiency <- factor(
+  df_rl$operational_efficiency,
+  levels = c("Inefficient", "Moderate", "Efficient")
+)
 
 # Plot
-ggplot(df_rl, aes(x=rl_clear, y=percent, fill=operational_efficiency)) +
-  geom_bar(stat="identity") +
-  scale_fill_manual(values=c("Inefficient"="pink", "Moderate"="lightyellow", "Efficient"="lightgreen")) +
-  labs(title="Operational Efficiency by Reporting Line Clarity",
-       x="Reporting Line Clarity", y="Percentage (%)",
-       fill="Efficiency") +
-  theme_minimal(base_size=12)
+ggplot(df_rl, aes(x = rl_clear, y = percent, fill = operational_efficiency)) +
+  geom_col(width = 0.65, colour = "grey30") +
+  geom_text(
+    aes(label = ifelse(percent >= 10, paste0(round(percent), "%"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3.5,
+    colour = "black"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Inefficient" = "#f4b6b6",
+      "Moderate"    = "#fff2a8",
+      "Efficient"   = "#b8e3b8"
+    ),
+    name = "Operational efficiency"
+  ) +
+  scale_y_continuous(
+    labels = percent_format(scale = 1),
+    expand = expansion(mult = c(0, 0.05))
+  ) +
+  labs(
+    title = "Operational efficiency by reporting line clarity",
+    subtitle = "Distribution of efficiency ratings within each reporting line category",
+    x = "Reporting line clarity",
+    y = "Percentage of staff (%)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 10),
+    axis.title = element_text(face = "bold"),
+    legend.position = "top",
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank()
+  )
 
 ```
 
+### Productivity by role alignment
 
-```{r}
+```{r,include=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# Prepare data
 df_ra <- data %>%
   select(rc_alignment, productivity_rating) %>%
   filter(!is.na(rc_alignment), !is.na(productivity_rating)) %>%
   group_by(rc_alignment, productivity_rating) %>%
-  summarise(n=n(), .groups='drop') %>%
+  summarise(n = n(), .groups = "drop") %>%
   group_by(rc_alignment) %>%
-  mutate(percent = n/sum(n)*100)
+  mutate(percent = n / sum(n) * 100) %>%
+  ungroup()
 
-ggplot(df_ra, aes(x=rc_alignment, y=percent, fill=productivity_rating)) +
-  geom_bar(stat="identity") +
-  scale_fill_manual(values=c("Low"="pink","Moderate"="lightyellow","High"="lightgreen")) +
-  labs(title="Productivity by Role Alignment with Skills",
-       x="Role Alignment", y="Percentage (%)",
-       fill="Productivity") +
-  theme_minimal(base_size=12)
+# Ensure meaningful ordering
+df_ra$rc_alignment <- factor(
+  df_ra$rc_alignment,
+  levels = c("No", "Partly", "Yes")
+)
+
+df_ra$productivity_rating <- factor(
+  df_ra$productivity_rating,
+  levels = c("Low", "Moderate", "High")
+)
+
+# Plot
+ggplot(df_ra, aes(x = rc_alignment, y = percent, fill = productivity_rating)) +
+  geom_col(width = 0.65, colour = "grey30") +
+  geom_text(
+    aes(label = ifelse(percent >= 10, paste0(round(percent), "%"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3.5,
+    colour = "black"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Low"      = "#f4b6b6",
+      "Moderate" = "#fff2a8",
+      "High"     = "#b8e3b8"
+    ),
+    name = "Productivity level"
+  ) +
+  scale_y_continuous(
+    labels = percent_format(scale = 1),
+    expand = expansion(mult = c(0, 0.05))
+  ) +
+  labs(
+    title = "Productivity by role alignment with skills",
+    subtitle = "Distribution of productivity ratings within each alignment category",
+    x = "Role alignment with skills",
+    y = "Percentage of staff (%)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 10),
+    axis.title = element_text(face = "bold"),
+    legend.position = "top",
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
 
 ```
 
-```{r}
+
+
+###  Diverging stacked bars for HR perceptions
+
+
+```{r,include=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# Prepare data
 df_hr <- data %>%
   select(hr_policy_clarity, staff_morale) %>%
   filter(!is.na(hr_policy_clarity), !is.na(staff_morale)) %>%
   group_by(hr_policy_clarity, staff_morale) %>%
-  summarise(n=n(), .groups='drop') %>%
+  summarise(n = n(), .groups = "drop") %>%
   group_by(hr_policy_clarity) %>%
-  mutate(percent = n/sum(n)*100)
+  mutate(percent = n / sum(n) * 100) %>%
+  ungroup()
 
-ggplot(df_hr, aes(x=hr_policy_clarity, y=percent, fill=staff_morale)) +
-  geom_bar(stat="identity") +
-  scale_fill_manual(values=c("Low"="pink","Moderate"="lightyellow","High"="lightgreen")) +
-  labs(title="Staff Morale by HR Policy Clarity",
-       x="HR Policy Clarity", y="Percentage (%)",
-       fill="Staff Morale") +
-  theme_minimal(base_size=12)
+# Order factors meaningfully
+df_hr$hr_policy_clarity <- factor(
+  df_hr$hr_policy_clarity,
+  levels = c("No", "Partly", "Yes")
+)
+
+df_hr$staff_morale <- factor(
+  df_hr$staff_morale,
+  levels = c("Low", "Moderate", "High")
+)
+
+# Plot
+ggplot(df_hr, aes(x = hr_policy_clarity, y = percent, fill = staff_morale)) +
+  geom_col(width = 0.65, colour = "grey30") +
+  geom_text(
+    aes(label = ifelse(percent >= 10, paste0(round(percent), "%"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3.5,
+    colour = "black"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Low"      = "#f4b6b6",
+      "Moderate" = "#fff2a8",
+      "High"     = "#b8e3b8"
+    ),
+    name = "Staff morale level"
+  ) +
+  scale_y_continuous(
+    labels = percent_format(scale = 1),
+    expand = expansion(mult = c(0, 0.05))
+  ) +
+  labs(
+    title = "Staff morale by HR policy clarity",
+    subtitle = "Distribution of morale levels within each HR policy clarity category",
+    x = "HR policy clarity",
+    y = "Percentage of staff (%)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 10),
+    axis.title = element_text(face = "bold"),
+    legend.position = "top",
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank()
+  )
 
 ```
 
-```{r}
+### Heatmap of governance factors vs staff morale
+
+
+```{r,include=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(scales)
+
+# Prepare data
 df_gov <- data %>%
   select(gov_tor, dm_efficiency, staff_morale) %>%
-  tidyr::pivot_longer(cols=c(gov_tor, dm_efficiency), names_to="Factor", values_to="Level") %>%
-  group_by(Factor, Level, staff_morale) %>%
-  summarise(n=n(), .groups='drop') %>%
-  group_by(Factor, Level) %>%
-  mutate(percent = n/sum(n)*100)
+  pivot_longer(
+    cols = c(gov_tor, dm_efficiency),
+    names_to = "factor",
+    values_to = "level"
+  ) %>%
+  filter(!is.na(level), !is.na(staff_morale)) %>%
+  group_by(factor, level, staff_morale) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(factor, level) %>%
+  mutate(percent = n / sum(n) * 100) %>%
+  ungroup()
 
-ggplot(df_gov, aes(x=Level, y=Factor, fill=percent)) +
-  geom_tile(color="white") +
-  scale_fill_gradient(low="pink", high="lightgreen") +
-  labs(title="Staff Morale Distribution Across Governance Factors",
-       x="Factor Level", y="Governance Factor", fill="% of Staff") +
-  theme_minimal(base_size=12)
+# Order factors and levels
+df_gov$factor <- factor(
+  df_gov$factor,
+  levels = c("gov_tor", "dm_efficiency"),
+  labels = c("Committee TOR clarity", "Decision-making efficiency")
+)
+
+df_gov$staff_morale <- factor(
+  df_gov$staff_morale,
+  levels = c("Low", "Moderate", "High")
+)
+
+# Plot
+ggplot(df_gov, aes(x = staff_morale, y = level, fill = percent)) +
+  geom_tile(color = "grey85") +
+  geom_text(
+    aes(label = ifelse(percent >= 10, paste0(round(percent), "%"), "")),
+    size = 3.2
+  ) +
+  scale_fill_gradient(
+    low = "#f4b6b6",
+    high = "#b8e3b8",
+    labels = percent_format(scale = 1),
+    name = "Share of staff"
+  ) +
+  facet_wrap(~ factor, scales = "free_y") +
+  labs(
+    title = "Staff morale distribution across governance dimensions",
+    subtitle = "Percent distribution within each governance level",
+    x = "Staff morale",
+    y = "Governance factor level"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    strip.text = element_text(face = "bold"),
+    panel.grid = element_blank(),
+    legend.position = "top"
+  )
+
 
 ```
 
-```{r}
+
+### Dot/Lollipop plot: average productivity by factor
+
+The following figure shows that productivity at KIPRE is not driven by a single organisational factor in isolation, but by the combined presence of role–skill alignment and clear reporting lines.
+
+The lowest productivity levels are observed where both role alignment and reporting clarity are absent, indicating structural friction rather than individual underperformance. In contrast, when roles are aligned with staff competencies and reporting lines are at least somewhat clear, mean productivity shifts decisively toward the high range.
+
+Notably, the highest productivity is observed among staff who report both role alignment and moderate clarity in reporting structures, suggesting that even incremental improvements in organisational clarity can yield measurable gains.
+
+
+
+```{r,include=TRUE, message=FALSE, warning=FALSE}
 df_prod <- data %>%
   select(rc_alignment, rl_clear, productivity_rating) %>%
-  mutate(prod_num = as.numeric(productivity_rating)) %>%
+  mutate(
+    productivity_rating = trimws(as.character(productivity_rating)),
+    productivity_rating = tolower(productivity_rating),
+    prod_num = case_when(
+      productivity_rating == "low" ~ 1,
+      productivity_rating == "moderate" ~ 2,
+      productivity_rating == "high" ~ 3,
+      TRUE ~ NA_real_
+    )
+  ) %>%
   group_by(rc_alignment, rl_clear) %>%
-  summarise(mean_prod=mean(prod_num, na.rm=TRUE), .groups='drop')
+  summarise(
+    mean_prod = mean(prod_num, na.rm = TRUE),
+    n_obs = sum(!is.na(prod_num)),
+    .groups = "drop"
+  ) %>%
+  filter(n_obs > 0) %>%   # critical: removes empty groups
+  mutate(
+    category = interaction(rc_alignment, rl_clear, sep = " | "),
+    category = reorder(category, mean_prod)
+  )
 
-ggplot(df_prod, aes(x=mean_prod, y=interaction(rc_alignment, rl_clear))) +
-  geom_point(color="darkgreen", size=3) +
-  geom_segment(aes(x=0, xend=mean_prod, y=interaction(rc_alignment, rl_clear), yend=interaction(rc_alignment, rl_clear)), color="grey") +
-  labs(title="Mean Productivity by Role Alignment and Reporting Line",
-       x="Mean Productivity (1=Low, 3=High)", y="Category") +
-  theme_minimal(base_size=12)
+ggplot(df_prod, aes(x = mean_prod, y = category)) +
+  geom_segment(
+    aes(x = 1, xend = mean_prod, yend = category),
+    colour = "grey75",
+    linewidth = 0.9
+  ) +
+  geom_point(
+    colour = "darkgreen",
+    size = 3.8
+  ) +
+  scale_x_continuous(
+    limits = c(1, 3),
+    breaks = c(1, 2, 3),
+    labels = c("Low", "Moderate", "High")
+  ) +
+  labs(
+    title = "Mean productivity by role alignment and\nreporting line clarity",
+    x = "Mean productivity rating",
+    y = "Role alignment | reporting line clarity"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title   = element_text(face = "bold"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"),
+    axis.text.x  = element_text(face = "bold"),
+    axis.text.y  = element_text(face = "bold")
+  )
+
 
 ```
 
+This pattern reinforces the interpretation that productivity at KIPRE is structurally enabled: staff perform best when expectations, authority, and competencies are coherently aligned.
