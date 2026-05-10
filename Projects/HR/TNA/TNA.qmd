@@ -1,0 +1,102 @@
+---
+title: "TNA"
+author: "Patrick Mwaura"
+format: html
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
+data <- read.csv("KIPRE_TNA_25-26_Final.csv")
+names(data) 
+
+```
+
+```{r, echo=FALSE}
+names(data) <- gsub("^section_[a-z]-", "", names(data)) 
+names(data) <- gsub("-", "_", names(data))              
+data <- as_tibble(data, .name_repair = "unique")
+
+new_names_dots <- c(
+  "SubmissionDate", "start", "end", "today", "note.0", "note.1", "date.filling",
+  "directorate", "division", "gender", "age.bracket", "name", "pf.no", 
+  "designation", "grade", "service.length", "duty.1", "duty.2", "duty.3", 
+  "duty.4", "duty.5", "duty.6", "job.desc.match", "role.clear", "task.change", 
+  "perf.rating", "targets.met", "challenge", "other.challenge", "note.4", 
+  "tech.skill", "ict.skill", "comm.skill", "mgmt.skill", "policy.skill", 
+  "finance.skill", "cust.service", "me.skill", "improve.skill", "attended.train", 
+  "train.1.y", "train.2.y", "train.3.y", "train.4.y", "train.5.y", "train.6.y", 
+  "train.1.n", "train.2.n", "train.3.n", "train.4.n", "train.5.n", "train.6.n", 
+  "train.effective", "skill.acquired", "no.skill.reason", "rel.train.1", 
+  "rel.train.2", "rel.train.3", "rel.train.4", "rel.train.5", "rel.train.6", 
+  "career.train.1", "career.train.2", "career.train.3", "career.train.4", 
+  "career.train.5", "career.train.6", "train.need.lvl", "train.type", 
+  "train.mode", "duration", "train.time", "support.h", "barrier", "other.support.h", 
+  "trends", "other.support.i", "new.skill.1", "new.skill.2", "new.skill.3", 
+  "new.skill.4", "new.skill.5", "new.skill.6", "comments", "notexx", "notexxx", 
+  "instanceID", "KEY", "SubID", "SubName", "AttachPres", "AttachExp", 
+  "Status", "Review", "DeviceID", "Edits", "Version"
+)
+
+# Apply to your data
+colnames(data) <- new_names_dots
+
+# Check the result
+head(names(data), 10)
+
+
+```
+
+```{r}
+library(viridis)
+library(hrbrthemes) # For clean typography
+
+# 1. Prepare and Score Data using your .dot names
+directorate.skills <- data %>%
+  mutate(across(c(tech.skill, ict.skill, comm.skill, mgmt.skill, 
+                  policy.skill, finance.skill, cust.service, me.skill), 
+                ~case_when(
+                  . == "high"   ~ 3,
+                  . == "medium" ~ 2,
+                  . == "low"    ~ 1,
+                  TRUE          ~ NA_real_
+                ))) %>%
+  select(directorate, tech.skill, ict.skill, comm.skill, mgmt.skill, 
+         policy.skill, finance.skill, cust.service, me.skill) %>%
+  pivot_longer(cols = -directorate, names_to = "Skill.Area", values_to = "Rating") %>%
+  group_by(directorate, Skill.Area) %>%
+  summarise(Average.Rating = mean(Rating, na.rm = TRUE), .groups = "drop") %>%
+  # Clean up labels: remove dots, capitalize
+  mutate(Skill.Area = gsub("\\.", " ", Skill.Area) %>% str_to_title())
+
+# 2. Level 8 Plot - Standardized for Windows Compatibility
+ggplot(directorate.skills, aes(x = Skill.Area, y = reorder(directorate, Average.Rating), fill = Average.Rating)) +
+  geom_tile(color = "white", size = 0.5) +
+  # Diverging Scale: Red (1) -> Yellow (2) -> Green (3)
+  scale_fill_gradient2(low = "#d73027", mid = "#fee08b", high = "#1a9850", 
+                       midpoint = 2, limit = c(1,3), 
+                       breaks = c(1, 2, 3), labels = c("Low", "Med", "High"),
+                       name = "Proficiency") +
+  theme_minimal(base_family = "sans") + # Uses standard Windows 'sans' font
+  theme(
+    axis.text.x = element_text(angle = 35, hjust = 1, size = 10, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 10, face = "bold", color = "black"),
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 11, color = "grey30"),
+    panel.grid = element_blank(),
+    legend.key.height = unit(1, "cm")
+  ) +
+  labs(
+    title = "Organizational Skill Gap Analysis 2025/26",
+    subtitle = "Aggregated levels by Directorate. Red identifies training priorities.",
+    x = NULL, 
+    y = "Directorate"
+  ) +
+  # Adds numeric values inside the tiles
+  geom_text(aes(label = round(Average.Rating, 1)), color = "black", size = 3.5)
+
+```
+
