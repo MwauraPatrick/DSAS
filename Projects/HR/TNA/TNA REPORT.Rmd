@@ -1,7 +1,7 @@
 ---
 title: "KIPRE STAFF TRAINING NEEDS ASSESSMENT (TNA) REPORT"
 author: ""
-date: "2026-01-31"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
 output: 
   pdf_document:
     latex_engine: pdflatex
@@ -11,6 +11,7 @@ output:
 header-includes:
   - \usepackage[table]{xcolor}
   - \usepackage{multirow}
+  - \usepackage{booktabs}
   - \usepackage{textgreek}
   - \usepackage{setspace}
   - \onehalfspacing
@@ -21,7 +22,7 @@ header-includes:
   - \usepackage{titling}
   - \pretitle{\begin{center}\LARGE\bfseries}
   - \posttitle{\par\vspace{1em}
-    {\large Prepared by Mr. Patrick Mwaura (DSAS) \newline For \newline Mrs. Stella Nyambariga, Head of HR }\par\end{center}\vskip 7em}
+    {\large Prepared by Mr. Patrick Mwaura (DSAS) \newline For \newline Head of HR, Mrs. Stella Nyambariga }\par\end{center}\vskip 7em}
   - \preauthor{}\postauthor{}
   - \predate{\begin{center}\large}\postdate{\par\end{center}}
 
@@ -92,9 +93,216 @@ In the research domain, the Kenya Snakebite Research and Intervention Division a
 Administrative and strategic functions are equally well-mapped, with consistent representation from Corporate Services and the Office of the Director General. Notably, only 10% of respondents are aged 55 or older, indicating a predominantly mid-career workforce with significant long-term growth potential. This demographic profile highlights a strategic opportunity to implement cross-cutting training programmes that standardise administrative excellence and ensure the institution is prepared for future succession and evolving digital demands.
 
 
+```{r workforce-table, results='asis', echo=FALSE, warning=FALSE,message=FALSE}
+library(tidyverse)
+library(xtable)
+
+# 1. Prepare and aggregate data
+raw_counts <- data %>%
+  count(section_a.directorate, section_a.division_section) %>%
+  mutate(
+    Directorate = str_to_title(
+      str_replace_all(section_a.directorate, "_", " ")
+    ),
+    
+    Division = str_to_title(
+      str_replace_all(section_a.division_section, "_", " ")
+    )
+  ) %>%
+  
+  arrange(Directorate) %>%
+  
+  select(Directorate, Division, n)
+
+# 2. Identify where each new directorate starts
+group_positions <- which(!duplicated(raw_counts$Directorate))
+
+group_names <- raw_counts$Directorate[group_positions]
+
+# 3. Create LaTeX row-group headers
+header_commands <- paste0(
+  "\\midrule\n",
+  "\\multicolumn{2}{l}{\\textbf{",
+  group_names,
+  "}} \\\\\n",
+  "\\midrule\n"
+)
+
+add_list <- list(
+  pos = as.list(group_positions - 1),
+  command = header_commands
+)
+
+# 4. Final display table
+display_df <- raw_counts %>%
+  select(Division, n) %>%
+  
+  rename(
+    `Division / Section` = Division,
+    `Staff Count` = n
+  )
+
+# 5. Print LaTeX table
+print(
+  xtable(
+    display_df,
+    caption = "Workforce distribution by directorate and division",
+    align = "llc"
+  ),
+  
+  type = "latex",
+  include.rownames = FALSE,
+  add.to.row = add_list,
+  comment = FALSE,
+  booktabs = TRUE,
+  caption.placement = "top",
+  
+  sanitize.text.function = identity
+)
+```
 
 
-```{r}
+```{r gender-age-table, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(janitor)
+library(xtable)
+
+# Define desired column order
+age_order <- c(
+  "under_25_years",
+  "25_34_years",
+  "35_44_years",
+  "45_54_years",
+  "55+_years"
+)
+
+# Generate table
+demographic_summary <- data %>%
+  
+  mutate(
+    section_a.age_bracket = factor(
+      section_a.age_bracket,
+      levels = age_order,
+      ordered = TRUE
+    )
+  ) %>%
+  
+  tabyl(section_a.gender, section_a.age_bracket) %>%
+  
+  adorn_totals(c("row", "col")) %>%
+  
+  adorn_percentages("row") %>%
+  
+  adorn_pct_formatting(digits = 1) %>%
+  
+  adorn_ns()
+
+# Clean column names
+colnames(demographic_summary) <- c(
+  "Gender",
+  "Under 25 years",
+  "25-34 years",
+  "35-44 years",
+  "45-54 years",
+  "55+ years",
+  "Total"
+)
+
+# Print using xtable
+print(
+  xtable(
+    demographic_summary,
+    caption = "Gender distribution across age brackets",
+    
+    align = paste0(
+      "l",
+      paste(rep("c", ncol(demographic_summary)), collapse = "")
+    )
+  ),
+  
+  type = "latex",
+  include.rownames = FALSE,
+  booktabs = TRUE,
+  caption.placement = "top",
+  comment = FALSE
+)
+```
+
+
+```{r grade-service-table, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(xtable)
+library(janitor)
+
+# define correct ordering explicitly
+service_levels <- c(
+  "Less Than 1 Year",
+  "1 3 Years",
+  "4 7 Years",
+  "8 15 Years",
+  "16+ Years"
+)
+
+grade_summary <- data %>%
+  
+  mutate(
+    Job_Grade = str_to_upper(section_a.job_grade),
+    Job_Grade_num = as.numeric(str_extract(Job_Grade, "\\d+")),
+    
+    Length_Service = section_a.length_service %>%
+      str_replace_all("_", " ") %>%
+      str_to_title()
+  ) %>%
+  
+  count(Job_Grade, Job_Grade_num, Length_Service) %>%
+  
+  # enforce row ordering
+  arrange(Job_Grade_num, Length_Service) %>%
+  
+  select(-Job_Grade_num) %>%
+  
+  pivot_wider(
+    names_from = Length_Service,
+    values_from = n,
+    values_fill = 0
+  ) %>%
+  
+  mutate(
+    Total = rowSums(across(where(is.numeric)))
+  )
+
+# ---- FORCE COLUMN ORDER (this is the missing fix) ----
+grade_summary <- grade_summary %>%
+  select(
+    Job_Grade,
+    all_of(service_levels),
+    Total
+  )
+
+# ---- FORCE ROW ORDER ----
+grade_summary <- grade_summary %>%
+  arrange(as.numeric(str_extract(Job_Grade, "\\d+")))
+
+# convert to matrix so xtable cannot reorder anything
+grade_matrix <- as.matrix(grade_summary)
+
+# print
+print(
+  xtable(
+    grade_matrix,
+    caption = "Job grade distribution by length of service",
+    align = c("l", rep("c", ncol(grade_matrix)))
+  ),
+  
+  type = "latex",
+  include.rownames = FALSE,
+  booktabs = TRUE,
+  caption.placement = "top",
+  comment = FALSE
+)
+```
+
+```{r, echo=FALSE,include=F, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(janitor)
 
@@ -138,27 +346,45 @@ print(grade_summary)
 
 This question helps management identify
 
-High-priority skill deficiencies
-Departments with the greatest capacity gaps
-Staff categories requiring urgent support
+- High-priority skill deficiencies
+- Departments with the greatest capacity gaps
+- Staff categories requiring urgent support
 
 Likely outputs
 
-Competency gap heatmaps
-Directorate ranking tables
-Priority training matrix
-Skill deficiency frequencies
+- Competency gap heatmaps
+- Directorate ranking tables
+- Priority training matrix
+- Skill deficiency frequencies
 
 Likely recommendations
 
-Targeted capacity-building programmes
-Directorate-specific training plans
-Prioritised budget allocation
+- Targeted capacity-building programmes
+- Directorate-specific training plans
+- Prioritised budget allocation
 
 
 
 ## 2. To what extent are employees adequately prepared to meet emerging organisational, technological, and policy-related demands?
 
+- Future workforce readiness
+- Digital transformation preparedness
+- Emerging competency requirements
+- Institutional adaptability
+
+Likely outputs
+
+- Emerging skills rankings
+- Workforce readiness summaries
+- Future skills dashboard
+- Trend analysis
+
+Likely recommendations
+
+- Future-focused training programmes
+- Digital skills initiatives
+- Leadership and innovation training
+- Strategic workforce development planning
 
 ##  Key recommendations 
 
