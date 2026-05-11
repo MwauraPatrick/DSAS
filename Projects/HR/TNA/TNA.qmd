@@ -5,19 +5,12 @@ format: html
 ---
 
 ```{r setup, include=FALSE}
-library(knitr)
-library(tidyverse)
-library(ggplot2)
-library(dplyr)
-library(readr)
-data <- read.csv("KIPRE_TNA_25-26_Final.csv")
-names(data) 
 
 ```
 
 ```{r, echo=FALSE}
 names(data) <- gsub("^section_[a-z]-", "", names(data)) 
-names(data) <- gsub("-", "_", names(data))              
+names(data) <- gsub("-", ".", names(data))              
 data <- as_tibble(data, .name_repair = "unique")
 
 new_names_dots <- c(
