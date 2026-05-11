@@ -22,7 +22,7 @@ header-includes:
   - \usepackage{titling}
   - \pretitle{\begin{center}\LARGE\bfseries}
   - \posttitle{\par\vspace{1em}
-    {\large Prepared by Mr. Patrick Mwaura (DSAS) \newline For \newline Head of HR, Mrs. Stella Nyambariga }\par\end{center}\vskip 7em}
+    {\large Prepared by CStat. Patrick Mwaura (DSAS) \newline For \newline Head of HR, Mrs. Stella Nyambariga }\par\end{center}\vskip 7em}
   - \preauthor{}\postauthor{}
   - \predate{\begin{center}\large}\postdate{\par\end{center}}
 
