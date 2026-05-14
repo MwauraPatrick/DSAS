@@ -37,6 +37,12 @@ library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(readr)
+library(tidyverse)
+library(xtable)
+library(tidyverse)
+library(janitor)
+library(xtable)
+
 data <- read.csv("KIPRE_TNA_25-26_Final.csv")
 
 names(data) <- gsub("^section_[a-z]-", "", names(data)) 
@@ -94,8 +100,6 @@ Administrative and strategic functions are equally well-mapped, with consistent 
 
 
 ```{r workforce-table, results='asis', echo=FALSE, warning=FALSE,message=FALSE}
-library(tidyverse)
-library(xtable)
 
 # 1. Prepare and aggregate data
 raw_counts <- data %>%
@@ -163,9 +167,7 @@ print(
 
 
 ```{r gender-age-table, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
-library(tidyverse)
-library(janitor)
-library(xtable)
+
 
 # Define desired column order
 age_order <- c(
@@ -303,8 +305,7 @@ print(
 ```
 
 ```{r, echo=FALSE,include=F, warning=FALSE, message=FALSE}
-library(tidyverse)
-library(janitor)
+
 
 # 1. Summary by Directorate and Division
 org_summary <- data %>%
@@ -363,6 +364,157 @@ Likely recommendations
 - Directorate-specific training plans
 - Prioritised budget allocation
 
+```{r}
+# Select, clean, and reshape data for the gap analysis
+gap_analysis_data <- data %>%
+  select(
+    directorate = section_a.directorate,
+    division = section_a.division_section,
+    job_grade = section_a.job_grade,
+    tech = section_d.tech_skill,
+    ict = section_d.ict_skill,
+    comm = section_d.comm_skill,
+    leadership = section_d.leadership_management,
+    policy = section_d.policy_analysis_and_implementation,
+    finance = section_d.finance_management,
+    customer = section_d.customer_service,
+    m_and_e = section_d.monitoring_evaluation
+  ) 
+
+
+competencies <- c(
+  "tech", "ict", "comm", "leadership",
+  "policy", "finance", "customer", "m_and_e"
+)
+```
+
+
+```{r}
+gap_long <- gap_analysis_data %>%
+  
+  pivot_longer(
+    cols = all_of(competencies),
+    names_to = "competency",
+    values_to = "level"
+  ) %>%
+  
+  mutate(
+    level = str_to_lower(level),
+    
+    gap_score = case_when(
+      level == "high"   ~ 0,
+      level == "medium" ~ 1,
+      level == "low"    ~ 2,
+      TRUE ~ NA_real_
+    )
+  )
+```
+
+
+```{r}
+overall_gap_summary <- gap_long %>%
+  
+  group_by(competency, level) %>%
+  
+  summarise(
+    n = n(),
+    .groups = "drop"
+  ) %>%
+  
+  group_by(competency) %>%
+  
+  mutate(
+    percent = round(100 * n / sum(n), 1)
+  ) %>%
+  
+  arrange(desc(percent))
+
+
+
+```
+
+
+```{r}
+directorate_gap <- gap_long %>%
+  
+  group_by(directorate, competency) %>%
+  
+  summarise(
+    mean_gap = mean(gap_score, na.rm = TRUE),
+    low_pct  = mean(level == "low") * 100,
+    med_pct  = mean(level == "medium") * 100,
+    .groups = "drop"
+  ) %>%
+  
+  arrange(desc(mean_gap))
+
+
+directorate_gap %>%
+  
+  ggplot(aes(
+    x = competency,
+    y = directorate,
+    fill = mean_gap
+  )) +
+  
+  geom_tile(color = "white") +
+  
+  geom_text(
+    aes(label = round(mean_gap, 2)),
+    size = 3.5,
+    color = "black"
+  ) +
+  
+  labs(
+    title = "Competency gap heatmap by directorate",
+    x = "Competency",
+    y = "Directorate",
+    fill = "Gap score"
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    )
+  )+scale_fill_gradient2(
+  low = "lightblue",
+  mid = "gold",
+  high = "red",
+  midpoint = 1
+)
+```
+
+
+```{r}
+division_gap <- gap_long %>%
+  
+  group_by(division, competency) %>%
+  
+  summarise(
+    mean_gap = mean(gap_score, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  
+  arrange(desc(mean_gap))
+
+```
+
+```{r}
+job_grade_gap <- gap_long %>%
+  
+  group_by(job_grade, competency) %>%
+  
+  summarise(
+    mean_gap = mean(gap_score, na.rm = TRUE),
+    low_pct  = mean(level == "low") * 100,
+    .groups = "drop"
+  ) %>%
+  
+  arrange(desc(mean_gap))
+```
 
 
 ## 2. To what extent are employees adequately prepared to meet emerging organisational, technological, and policy-related demands?
