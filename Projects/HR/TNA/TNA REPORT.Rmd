@@ -40,23 +40,104 @@ knitr::opts_chunk$set(
   fig.height = 5,
   dpi = 300
 )
+
 library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(readr)
 library(tidyverse)
 library(xtable)
-library(tidyverse)
 library(janitor)
 library(xtable)
+library(scales)
+library(janitor)
+
 
 data <- read.csv("KIPRE_TNA_25-26_Final.csv")
 
 names(data) <- gsub("^section_[a-z]-", "", names(data)) 
 names(data) <- gsub("-", ".", names(data))              
 data <- as_tibble(data, .name_repair = "unique")
+```
 
 
+```{r setup2, include=FALSE}
+# Clean up
+data[[8]] <- recode(
+  data[[8]],
+  "animal_sciences_welfare_and_ethics_directorate" =
+    "ASWED",
+  "capacity_building_partnership_and_grant_management_directorate" =
+    "CBPGMD",
+  "corporate_services_directorate" =
+    "CSD",
+  "corporation_secretary_legal_services_directorate" =
+    "CSLSD",
+  "internal_audit_and_risk_assurance_directorate" =
+    "IARAD",
+  "office_of_the_director_general" =
+    "ODG",
+  "research_and_product_development_directorate" =
+    "RPDD"
+)
+```
+
+
+```{r setup3, include=FALSE}
+data <- data %>%
+  mutate(
+    section_a.division_section = recode(
+      section_a.division_section,
+
+      "corporate_communication_division" =
+        "CCD",
+
+      "data_science_and_analytics_section" =
+        "DSAS",
+
+      "evolutionary_ecology_conservation_and_ecosystem_health_division" =
+        "EECEHD",
+
+      "finance_and_accounts_division" =
+        "FAD",
+
+      "human_resource_and_administration_division" =
+        "HRAD",
+
+      "infectious_diseases_and_one_health_division" =
+        "IDOHD",
+
+      "information_communication_technology_division" =
+        "ICTD",
+
+      "kenya_snakebite_research_and_intervention_division" =
+        "KSRID",
+
+      "laboratory_services_section" =
+        "LSS",
+
+      "national_laboratory_animal_breeding_division" =
+        "NLABD",
+
+      "non_communicable_diseases_division" =
+        "NCDD",
+
+      "partnerships_and_grants_management_division" =
+        "PGMD",
+
+      "planning_and_strategy_division" =
+        "PSD",
+
+      "reproductive_health_and_biology_division" =
+        "RHBD",
+
+      "veterinary_clinical_and_diagnostics_services_division" =
+        "VCDSD",
+
+      "welfare_and_ethics_division" =
+        "WED"
+    )
+  )
 ```
 
 \definecolor{softred}{RGB}{255,200,200}
@@ -95,6 +176,7 @@ By triangulating data from these domains, the analysis identifies not only curre
 The assessment was digitized via ODK Central and deployed from $20^{th}-28^{th}$ April of 2026. To ensure we captured a representative voice, we used a multi-channel approach—utilizing official email and professional WhatsApp groups. Participation was voluntary, positioned as a collaborative effort to co-design the organization’s future training roadmap.
 Data Processing & Analysis
 Once the collection window closed, raw data was ingested into R (v4.5.2). The analytical pipeline focused on cleaning, recoding qualitative responses for statistical depth, and aggregating the results to provide a granular view of needs across all Directorates and Divisions.
+
 
 
 
@@ -239,9 +321,6 @@ print(
 
 
 ```{r grade-service-table, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
-library(tidyverse)
-library(xtable)
-library(janitor)
 
 # define correct ordering explicitly
 service_levels <- c(
@@ -395,121 +474,345 @@ competencies <- c(
 )
 ```
 
+The baseline institutional data establishes that while the organization operates from a fundamentally stable footing, it faces a pervasive mid-level capability ceiling. Across all evaluated competencies, the workforce maintains a baseline Average Severity Score of 0.662, with a healthy 37.0% of responses indicating High Proficiency (Safe Zone) and only a minimal 3.3% falling into the Low Proficiency (Critical Alert Zone).However, a deeper look into the specific competency areas reveals that this stability is heavily anchored by general operations, specifically Comm (55.0% High), Customer (55.0% High), and baseline Tech applications (48.8% High). When these general strengths are set aside, a critical structural vulnerability emerges: a massive 59.7% company-wide majority of competencies sit clustered within the Medium Proficiency (Warning Zone). This exposure is most acute within the organization's specialized technical and regulatory pillars—specifically ICT (Information and Communications Technology) and Policy implementation—where 72.5% and 71.2% of the workforce, respectively, reside in this warning track.This profile diagnoses an organization whose staff possess excellent general baseline skills, but encounter a clear operational ceiling when handling advanced ICT core infrastructure and specialized Policy requirements. Rather than a widespread institutional crisis, the data uncovers a highly focused training mandate: strategic development resources must pivot away from generic corporate courses, and instead be aggressively targeted toward formalizing internal capacity-building pipelines for advanced ICT systems management, Monitoring & Evaluation (M&E), and Policy Implementation.
 
-```{r}
+```{r, include=FALSE}
+# Data Processing Pipeline
 gap_long <- gap_analysis_data %>%
-  
   pivot_longer(
     cols = all_of(competencies),
     names_to = "competency",
     values_to = "level"
   ) %>%
-  
   mutate(
-    level = str_to_lower(level),
-    
+    level = str_to_lower(trimws(level)), 
     gap_score = case_when(
       level == "high"   ~ 0,
       level == "medium" ~ 1,
       level == "low"    ~ 2,
-      TRUE ~ NA_real_
+      TRUE              ~ NA_real_
     )
+  )
+
+# 1. Calculate and Clean the Metrics (Excluding Total Responses)
+overall_metrics_clean <- gap_long %>%
+  filter(!is.na(level), !is.na(gap_score)) %>% 
+  summarise(
+    `Average Severity Score` = round(mean(gap_score), 3),
+    `High Proficiency (%)`   = round(mean(level == "high") * 100, 1),
+    `Medium Proficiency (%)` = round(mean(level == "medium") * 100, 1),
+    `Low Proficiency (%)`    = round(mean(level == "low") * 100, 1)
+  )
+
+# 2. Configure xtable for a professional PDF appearance
+options(xtable.comment = FALSE) # Removes the default raw LaTeX comment banner
+
+xtab <- xtable(
+  overall_metrics_clean, 
+  caption = "Overall Institutional Competency Gap Profile",
+  align   = "lcccc" # Left aligns table header, centers all data columns
+)
+
+# 3. Print the LaTeX table directly into the PDF engine
+print(
+  xtab, 
+  type = "latex", 
+  include.rownames = FALSE, # Cleans out the default row index number column (1)
+  booktabs = TRUE,          # Employs clean executive horizontal table lines
+  table.placement = "H"     # Forces LaTeX to lock the table position exactly here
+)
+```
+\begin{table}
+\centering
+\caption{Overall Institutional Competency Gap Profile} 
+\begin{tabular}{cccc}
+  \toprule
+Average Severity Score & High Proficiency (\%) & Medium Proficiency (\%) & Low Proficiency (\%) \\ 
+  \midrule
+0.66 & 37.00 & 59.70 & 3.30 \\ 
+   \bottomrule
+\end{tabular}
+\end{table}
+
+
+```{r , fig.height=6, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+# Color Definitions
+color_high   <- "#2E7D32" # Deep Green (Safe Zone)
+color_medium <- "#FBC02D" # Amber/Yellow (Warning)
+color_low    <- "#C62828" # Deep Red (Severe Gap)
+
+# 2. Corrected Data Processing Pipeline
+overall_gap_summary <- gap_long %>%
+  filter(!is.na(level), !is.na(gap_score)) %>% 
+  group_by(competency, level) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  
+  # Calculate overall sorting weights
+  group_by(competency) %>%
+  mutate(
+    proportion = n / sum(n),
+    total_gap_weight = sum(n * case_when(level == "low" ~ 2, level == "medium" ~ 1, TRUE ~ 0)) / sum(n)
+  ) %>%
+  ungroup() %>%
+  
+  # Explicit stacking order: Low (bottom) -> Medium -> High (top)
+  mutate(level = factor(level, levels = c("low", "medium", "high"))) %>%
+  
+  # FIXED: Arrange rows in reverse level order so cumsum() aligns with ggplot's bottom-up draw
+  arrange(competency, desc(level)) %>%
+  
+  # Calculate coordinates
+  group_by(competency) %>%
+  mutate(
+    label_y = cumsum(proportion) - (proportion / 2),
+    competency = forcats::fct_reorder(competency, total_gap_weight, .desc = TRUE)
+  ) %>%
+  ungroup()
+
+# 3. Plot Construction
+ggplot(overall_gap_summary, aes(x = competency, y = proportion, fill = level)) +
+  geom_col(position = "stack", width = 0.75, color = "white", lwd = 0.4) +
+  
+  geom_text(
+    aes(
+      y = label_y,
+      label = scales::percent(proportion, accuracy = 0.1),
+      # Ensures high visibility contrast across dark vs light shades
+      color = ifelse(level == "medium", "black", "white")
+    ),
+    size = 3,
+    fontface = "bold"
+  ) +
+  
+  scale_y_continuous(labels = scales::percent_format(), expand = c(0, 0)) +
+  
+  # Clean layout text formatting for raw snake_case categories
+  scale_x_discrete(
+    labels = c(
+      "m_and_e"    = "M & E",
+      "id"         = "ID",
+      "policy"     = "Policy",
+      "finance"    = "Finance",
+      "leadership" = "Leadership",
+      "tech"       = "Tech",
+      "comm"       = "Comm",
+      "customer"   = "Customer"
+    )
+  ) +
+  
+  scale_fill_manual(
+    values = c("low" = color_low, "medium" = color_medium, "high" = color_high),
+    breaks = c("low", "medium", "high"),
+    labels = c("Low (Severe Gap)", "Medium (Warning)", "High (Safe Zone)")
+  ) +
+  
+  scale_color_identity() +
+  
+  labs(
+    title = "Overall Competency Gap Composition Profile",
+    subtitle = "Stacked from severe gap (bottom) to safe zone (top) with corrected math alignments",
+    x = "Competency Core Area",
+    y = "Proportional Composition Share",
+    fill = "Proficiency Status"
+  ) +
+  
+  theme_minimal(base_size = 11) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom"
+  )
+
+```
+
+
+```{r, fig.height=8, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+# Configuration
+lambda <- 5 
+
+# Explicit, intuitive severity colors
+color_safe    <- "#2E7D32" # Deep Green (High Competency = 0 Severity)
+color_warning <- "#FBC02D" # Amber/Yellow (Medium Competency = 1 Severity)
+color_severe  <- "#C62828" # Deep Red (Low Competency = 2 Severity)
+
+
+
+global_mean <- mean(gap_long$gap_score, na.rm = TRUE)
+
+directorate_gap <- gap_long %>%
+  group_by(directorate, competency) %>%
+  summarise(
+    n = n(),
+    mean_gap = mean(gap_score, na.rm = TRUE),
+    
+    # Shrinkage calculation
+    shrink_gap = (n / (n + lambda)) * mean_gap +
+                  (lambda / (n + lambda)) * global_mean,
+    
+    low_pct  = mean(level == "low", na.rm = TRUE) * 100,
+    med_pct  = mean(level == "medium", na.rm = TRUE) * 100,
+    high_pct = mean(level == "high", na.rm = TRUE) * 100,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    # Ordering so directorates with the WORST aggregate gaps appear at the top
+    directorate = forcats::fct_reorder(directorate, shrink_gap, .fun = mean, na.rm = TRUE)
+  )
+
+# 3. Plotting Pipeline
+ggplot(directorate_gap, aes(x = competency, y = directorate, fill = shrink_gap, alpha = n)) +
+  geom_tile(color = "white", lwd = 0.4) +
+  
+  geom_text(
+    aes(label = sprintf("%.2f", shrink_gap)),
+    size = 3.2,
+    fontface = "bold",
+    color = "black",
+    vjust = -0.3
+  ) +
+  
+  geom_text(
+    aes(label = paste0("H:", round(high_pct, 0), "% M:", round(med_pct, 0), "% L:", round(low_pct, 0), "%")),
+    size = 1.8,
+    vjust = 1.6,
+    color = "grey10"
+  ) +
+  
+  scale_alpha(range = c(0.5, 1), guide = "none") +
+  
+  # SEVERITY GRADIENT: Green (0) -> Yellow (1) -> Red (2)
+  scale_fill_gradient2(
+    low = color_safe,
+    mid = color_warning,
+    high = color_severe,
+    midpoint = 1,
+    name = "Severity Index",
+    breaks = c(0, 1, 2),
+    labels = c("0 (High / Safe)", "1 (Medium)", "2 (Low / Severe)")
+  ) +
+  
+  labs(
+    title = "Competency Gap Heatmap by Directorate",
+    subtitle = "Shrinkage adjusted metrics (Red indicates highest deficiency severity)",
+    x = "Competency Area",
+    y = "Directorate",
+    caption = "Values: High=0, Medium=1, Low=2. Smaller teams are safely shrunken toward global averages to eliminate sample bias."
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    legend.key.width = unit(1.5, "cm"),
+    plot.title = element_text(face = "bold", size = 14),
+    plot.caption = element_text(size = 8, hjust = 0, color = "grey40")
+  )
+
+```
+
+```{r division_heatmap, fig.height=8, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+
+# 1. Configuration & Colors
+lambda <- 5 
+color_safe    <- "#2E7D32" # Deep Green
+color_warning <- "#FBC02D" # Amber/Yellow
+color_severe  <- "#C62828" # Deep Red
+
+global_mean <- mean(gap_long$gap_score, na.rm = TRUE)
+
+# 2. Advanced Data Processing & Label Consolidation
+division_gap <- gap_long %>%
+  filter(!is.na(division), !is.na(competency), !is.na(level)) %>% 
+  
+  group_by(division, competency) %>%
+  summarise(
+    n = n(),
+    mean_gap = mean(gap_score, na.rm = TRUE),
+    shrink_gap = (n / (n + lambda)) * mean_gap +
+                  (lambda / (n + lambda)) * global_mean,
+    
+    low_pct  = mean(level == "low", na.rm = TRUE) * 100,
+    med_pct  = mean(level == "medium", na.rm = TRUE) * 100,
+    high_pct = mean(level == "high", na.rm = TRUE) * 100,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    # Reorder Y-axis by overall deficiency weight
+    division = forcats::fct_reorder(division, shrink_gap, .fun = mean, na.rm = TRUE),
+    
+    # FIXED: Combine both metrics into a SINGLE text label block with a clean line break (\n)
+    # Format line 1: "0.77" 
+    # Format line 2: "H:15 M:70 L:15"
+    combined_label = paste0(
+      sprintf("%.2f", shrink_gap), "\n",
+      "H:", round(high_pct, 0), " M:", round(med_pct, 0), " L:", round(low_pct, 0)
+    )
+  )
+
+# 3. Clean Single-Layer Plotting
+ggplot(division_gap, aes(x = competency, y = division, fill = shrink_gap, alpha = n)) +
+  geom_tile(color = "white", lwd = 0.5) +
+  
+  # FIXED: Only use ONE text geom now so overlapping is physically impossible
+  geom_text(
+    aes(label = combined_label),
+    size = 1.8,          # Scaled for crystal-clear readability within the cells
+    lineheight = 0.85,   # Slightly tightens the spacing between line 1 and line 2
+    fontface = "bold",
+    color = "grey15"     # High-contrast readable dark gray text
+  ) +
+  
+  scale_alpha(range = c(0.5, 1), guide = "none") +
+  
+  scale_fill_gradient2(
+    low = color_safe,
+    mid = color_warning,
+    high = color_severe,
+    midpoint = 1,
+    name = "Severity Index",
+    breaks = c(0, 1, 2),
+    labels = c("0 (High / Safe)", "1 (Medium)", "2 (Low / Severe)")
+  ) +
+  
+  scale_x_discrete(
+    labels = c(
+      "m_and_e"    = "M & E",
+      "id"         = "ID",
+      "policy"     = "Policy",
+      "finance"    = "Finance",
+      "leadership" = "Leadership",
+      "tech"       = "Tech",
+      "comm"       = "Comm",
+      "customer"   = "Customer"
+    )
+  ) +
+  
+  labs(
+    title = "Competency Gap Heatmap by Division",
+    subtitle = "Adjusted averages (Warm tones indicate higher training needs)",
+    x = "Competency Core Area",
+    y = "Division",
+    caption = "Labels show: Adjusted Score (Top) / Employee Skill Breakdowns (Bottom)."
+  ) +
+  
+  theme_minimal(base_size = 10) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    legend.key.width = unit(1.2, "cm"),
+    plot.title = element_text(face = "bold", size = 12),
+    plot.caption = element_text(size = 7, hjust = 0, color = "grey40")
   )
 ```
 
 
-```{r}
-overall_gap_summary <- gap_long %>%
-  
-  group_by(competency, level) %>%
-  
-  summarise(
-    n = n(),
-    .groups = "drop"
-  ) %>%
-  
-  group_by(competency) %>%
-  
-  mutate(
-    percent = round(100 * n / sum(n), 1)
-  ) %>%
-  
-  arrange(desc(percent))
 
-
-
-```
-
-
-```{r}
-directorate_gap <- gap_long %>%
-  
-  group_by(directorate, competency) %>%
-  
-  summarise(
-    mean_gap = mean(gap_score, na.rm = TRUE),
-    low_pct  = mean(level == "low") * 100,
-    med_pct  = mean(level == "medium") * 100,
-    .groups = "drop"
-  ) %>%
-  
-  arrange(desc(mean_gap))
-
-
-directorate_gap %>%
-  
-  ggplot(aes(
-    x = competency,
-    y = directorate,
-    fill = mean_gap
-  )) +
-  
-  geom_tile(color = "white") +
-  
-  geom_text(
-    aes(label = round(mean_gap, 2)),
-    size = 3.5,
-    color = "black"
-  ) +
-  
-  labs(
-    title = "Competency gap heatmap by directorate",
-    x = "Competency",
-    y = "Directorate",
-    fill = "Gap score"
-  ) +
-  
-  theme_minimal() +
-  
-  theme(
-    axis.text.x = element_text(
-      angle = 45,
-      hjust = 1
-    )
-  )+scale_fill_gradient2(
-  low = "lightblue",
-  mid = "gold",
-  high = "red",
-  midpoint = 1
-)
-```
-
-
-```{r}
-division_gap <- gap_long %>%
-  
-  group_by(division, competency) %>%
-  
-  summarise(
-    mean_gap = mean(gap_score, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  
-  arrange(desc(mean_gap))
-
-```
-
-```{r}
+```{r,fig.height=8, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
 job_grade_gap <- gap_long %>%
   
   group_by(job_grade, competency) %>%
@@ -521,6 +824,110 @@ job_grade_gap <- gap_long %>%
   ) %>%
   
   arrange(desc(mean_gap))
+
+
+
+# 1. Configuration & Shared Color Definitions
+lambda <- 5 
+
+color_safe    <- "#2E7D32" # Deep Green (High Competency = 0 Severity)
+color_warning <- "#FBC02D" # Amber/Yellow (Medium Competency = 1 Severity)
+color_severe  <- "#C62828" # Deep Red (Low Competency = 2 Severity)
+
+global_mean <- mean(gap_long$gap_score, na.rm = TRUE)
+
+# 2. Synchronized Data Processing (Aggregated by Job Grade)
+job_grade_gap <- gap_long %>%
+  # Filter out missing records to keep the factors tightly aligned
+  filter(!is.na(job_grade), !is.na(competency), !is.na(level)) %>% 
+  
+  group_by(job_grade, competency) %>%
+  summarise(
+    n = n(),
+    mean_gap = mean(gap_score, na.rm = TRUE),
+    
+    # Shrinkage calculation to stabilize small sample sizes at specific seniority tiers
+    shrink_gap = (n / (n + lambda)) * mean_gap +
+                  (lambda / (n + lambda)) * global_mean,
+    
+    # Distribution composition metrics per job grade cell
+    low_pct  = mean(level == "low", na.rm = TRUE) * 100,
+    med_pct  = mean(level == "medium", na.rm = TRUE) * 100,
+    high_pct = mean(level == "high", na.rm = TRUE) * 100,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    # Reorder Y-axis: Seniority bands with the WORST aggregate gaps stack at the top
+    job_grade = forcats::fct_reorder(job_grade, shrink_gap, .fun = mean, na.rm = TRUE),
+    
+    # Consolidated, non-overlapping visual text metric label
+    combined_label = paste0(
+      sprintf("%.2f", shrink_gap), "\n",
+      "H:", round(high_pct, 0), " M:", round(med_pct, 0), " L:", round(low_pct, 0)
+    )
+  )
+
+# 3. Finalized Plotting Pipeline
+ggplot(job_grade_gap, aes(x = competency, y = job_grade, fill = shrink_gap, alpha = n)) +
+  # Draw crisp cell partitions
+  geom_tile(color = "white", lwd = 0.5) +
+  
+  # Combined single text layer prevents vertical overlapping bugs
+  geom_text(
+    aes(label = combined_label),
+    size = 2.2,         
+    lineheight = 0.85,  
+    fontface = "bold",
+    color = "grey10"
+  ) +
+  
+  # Tile visibility mapping based on sample density (no legend)
+  scale_alpha(range = c(0.5, 1), guide = "none") +
+  
+  # CONTINUOUS SEVERITY GRADIENT: Green (0) -> Yellow (1) -> Red (2)
+  scale_fill_gradient2(
+    low = color_safe,
+    mid = color_warning,
+    high = color_severe,
+    midpoint = 1,
+    name = "Severity Index",
+    breaks = c(0, 1, 2),
+    labels = c("0 (High / Safe)", "1 (Medium)", "2 (Low / Severe)")
+  ) +
+  
+  # Presentation-ready name lookups for technical snake_case tokens
+  scale_x_discrete(
+    labels = c(
+      "m_and_e"    = "M & E",
+      "id"         = "ID",
+      "policy"     = "Policy",
+      "finance"    = "Finance",
+      "leadership" = "Leadership",
+      "tech"       = "Tech",
+      "comm"       = "Comm",
+      "customer"   = "Customer"
+    )
+  ) +
+  
+  labs(
+    title = "Competency Gap Heatmap by Job Grade",
+    subtitle = "Shrinkage adjusted metrics (Warm tones indicate highest deficiency severity)",
+    x = "Competency Core Area",
+    y = "Job Grade",
+    caption = "Values: High=0, Medium=1, Low=2. Labels display: Shrunk Score / raw H-M-L percentages."
+  ) +
+  
+  theme_minimal(base_size = 11) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    legend.key.width = unit(1.5, "cm"),
+    plot.title = element_text(face = "bold", size = 14),
+    plot.caption = element_text(size = 8, hjust = 0, color = "grey40")
+  )
+
 ```
 
 
