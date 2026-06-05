@@ -83,62 +83,7 @@ data[[8]] <- recode(
 ```
 
 
-```{r setup3, include=FALSE}
-data <- data %>%
-  mutate(
-    section_a.division_section = recode(
-      section_a.division_section,
 
-      "corporate_communication_division" =
-        "CCD",
-
-      "data_science_and_analytics_section" =
-        "DSAS",
-
-      "evolutionary_ecology_conservation_and_ecosystem_health_division" =
-        "EECEHD",
-
-      "finance_and_accounts_division" =
-        "FAD",
-
-      "human_resource_and_administration_division" =
-        "HRAD",
-
-      "infectious_diseases_and_one_health_division" =
-        "IDOHD",
-
-      "information_communication_technology_division" =
-        "ICTD",
-
-      "kenya_snakebite_research_and_intervention_division" =
-        "KSRID",
-
-      "laboratory_services_section" =
-        "LSS",
-
-      "national_laboratory_animal_breeding_division" =
-        "NLABD",
-
-      "non_communicable_diseases_division" =
-        "NCDD",
-
-      "partnerships_and_grants_management_division" =
-        "PGMD",
-
-      "planning_and_strategy_division" =
-        "PSD",
-
-      "reproductive_health_and_biology_division" =
-        "RHBD",
-
-      "veterinary_clinical_and_diagnostics_services_division" =
-        "VCDSD",
-
-      "welfare_and_ethics_division" =
-        "WED"
-    )
-  )
-```
 
 \definecolor{softred}{RGB}{255,200,200}
 \definecolor{softyellow}{RGB}{255,255,200}
@@ -427,7 +372,62 @@ print(grade_summary)
 
 ```
 
+```{r setup3, include=FALSE}
+data <- data %>%
+  mutate(
+    section_a.division_section = recode(
+      section_a.division_section,
 
+      "corporate_communication_division" =
+        "CCD",
+
+      "data_science_and_analytics_section" =
+        "DSAS",
+
+      "evolutionary_ecology_conservation_and_ecosystem_health_division" =
+        "EECEHD",
+
+      "finance_and_accounts_division" =
+        "FAD",
+
+      "human_resource_and_administration_division" =
+        "HRAD",
+
+      "infectious_diseases_and_one_health_division" =
+        "IDOHD",
+
+      "information_communication_technology_division" =
+        "ICTD",
+
+      "kenya_snakebite_research_and_intervention_division" =
+        "KSRID",
+
+      "laboratory_services_section" =
+        "LSS",
+
+      "national_laboratory_animal_breeding_division" =
+        "NLABD",
+
+      "non_communicable_diseases_division" =
+        "NCDD",
+
+      "partnerships_and_grants_management_division" =
+        "PGMD",
+
+      "planning_and_strategy_division" =
+        "PSD",
+
+      "reproductive_health_and_biology_division" =
+        "RHBD",
+
+      "veterinary_clinical_and_diagnostics_services_division" =
+        "VCDSD",
+
+      "welfare_and_ethics_division" =
+        "WED"
+    )
+  )
+```
 
 ### 1. Which critical competency gaps exist across directorates, divisions, and job grades, and which areas require immediate training intervention?
 
@@ -792,7 +792,7 @@ ggplot(division_gap, aes(x = competency, y = division, fill = shrink_gap, alpha 
   
   labs(
     title = "Competency Gap Heatmap by Division",
-    subtitle = "Adjusted averages (Warm tones indicate higher training needs)",
+    subtitle = "Shrinkage adjusted metrics (Warm tones indicate higher training needs)",
     x = "Competency Core Area",
     y = "Division",
     caption = "Labels show: Adjusted Score (Top) / Employee Skill Breakdowns (Bottom)."
@@ -932,6 +932,343 @@ ggplot(job_grade_gap, aes(x = competency, y = job_grade, fill = shrink_gap, alph
 
 
 ## 2. To what extent are employees adequately prepared to meet emerging organisational, technological, and policy-related demands?
+
+```{r}
+# Create the dataset
+future_readiness <- data %>%
+  select(
+#Baseline variables
+    section_a.directorate,
+    section_a.division_section,
+    section_a.job_grade,
+
+    # current preparedness
+    section_d.tech_skill,
+    section_d.ict_skill,
+    section_d.leadership_management,
+    section_d.policy_analysis_and_implementation,
+    section_d.monitoring_evaluation,
+
+    # perceived improvement needs
+    section_d.improve_skill,
+
+    # future training requirements
+    starts_with("section_f.relevant_training_curr_role_"),
+    starts_with("section_f.career_progression_training_"),
+
+    section_f.level_training_needs,
+    section_f.training_type,
+
+    # organisational adaptability
+    section_h.support_training,
+    section_h.barrier,
+
+    # future trends
+    section_i.emerging_trends,
+
+    # future skills
+    starts_with("section_i.new_skill_you_need_")
+  )
+```
+
+```{r}
+readiness_scores <- future_readiness %>%
+  mutate(
+    across(
+      c(
+        section_d.tech_skill,
+        section_d.ict_skill,
+        section_d.leadership_management,
+        section_d.policy_analysis_and_implementation,
+        section_d.monitoring_evaluation
+      ),
+      ~ case_when(
+        . == "low" ~ 1,
+        . == "medium" ~ 2,
+        . == "high" ~ 3,
+        TRUE ~ NA_real_
+      )
+    )
+  ) %>%
+  rowwise() %>%
+  mutate(
+    readiness_index = mean(
+      c(
+        section_d.tech_skill,
+        section_d.ict_skill,
+        section_d.leadership_management,
+        section_d.policy_analysis_and_implementation,
+        section_d.monitoring_evaluation
+      ),
+      na.rm = TRUE
+    )
+  ) %>%
+  ungroup()
+
+```
+
+
+```{r}
+readiness_scores %>%
+  summarise(
+    Mean = mean(readiness_index),
+    SD = sd(readiness_index),
+    Min = min(readiness_index),
+    Max = max(readiness_index)
+  )
+```
+
+
+```{r}
+directorate_readiness <- readiness_scores %>%
+  group_by(section_a.directorate) %>%
+  summarise(
+    readiness = mean(readiness_index, na.rm = TRUE),
+    n = n()
+  ) %>%
+  arrange(desc(readiness))
+
+directorate_readiness
+```
+```{r}
+competency_long <- future_readiness %>%
+  select(
+    section_d.tech_skill,
+    section_d.ict_skill,
+    section_d.leadership_management,
+    section_d.policy_analysis_and_implementation,
+    section_d.monitoring_evaluation
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = "competency",
+    values_to = "level"
+  )
+
+competency_long %>%
+  count(competency, level) %>%
+  group_by(competency) %>%
+  mutate(pct = n / sum(n)) %>%
+  ggplot(
+    aes(
+      competency,
+      pct,
+      fill = level
+    )
+  ) +
+  geom_col() +
+  coord_flip() +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Workforce readiness profile",
+    x = "",
+    y = "Percentage"
+  )
+```
+```{r}
+library(tidytext)
+
+trend_long <- future_readiness %>%
+  select(section_i.emerging_trends) %>%
+  separate_rows(
+    section_i.emerging_trends,
+    sep = " "
+  ) %>%
+  filter(section_i.emerging_trends != "")
+
+trend_rank <- trend_long %>%
+  count(section_i.emerging_trends) %>%
+  arrange(desc(n))
+
+trend_rank
+```
+```{r}
+trend_rank %>%
+  ggplot(
+    aes(
+      reorder(section_i.emerging_trends, n),
+      n
+    )
+  ) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Emerging organisational trends",
+    x = "",
+    y = "Frequency"
+  )
+```
+
+
+
+```{r}
+future_skills_long <- future_readiness %>%
+  select(starts_with("section_i.new_skill_you_need_")) %>%
+  pivot_longer(
+    everything(),
+    values_to = "skill"
+  ) %>%
+  filter(
+    !is.na(skill),
+    skill != ""
+  )
+
+skill_rank <- future_skills_long %>%
+  count(skill, sort = TRUE)
+
+skill_rank
+```
+
+
+```{r}
+skill_rank %>%
+  slice_max(n, n = 20) %>%
+  ggplot(
+    aes(
+      reorder(skill, n),
+      n
+    )
+  ) +
+  geom_point(size = 3) +
+  geom_segment(
+    aes(
+      x = skill,
+      xend = skill,
+      y = 0,
+      yend = n
+    )
+  ) +
+  coord_flip() +
+  labs(
+    title = "Most requested future skills",
+    x = "",
+    y = "Frequency"
+  )
+```
+
+
+```{r}
+improvement_long <- future_readiness %>%
+  select(section_d.improve_skill) %>%
+  separate_rows(
+    section_d.improve_skill,
+    sep = " "
+  )
+```
+
+```{r}
+improvement_rank <- improvement_long %>%
+  count(section_d.improve_skill) %>%
+  arrange(desc(n))
+
+improvement_rank
+```
+
+```{r}
+future_readiness %>%
+  count(section_f.level_training_needs) %>%
+  mutate(
+    pct = n / sum(n) * 100
+  )
+```
+```{r}
+barrier_long <- future_readiness %>%
+  select(section_h.barrier) %>%
+  separate_rows(
+    section_h.barrier,
+    sep = " "
+  )
+```
+
+```{r}
+barrier_rank <- barrier_long %>%
+  count(section_h.barrier) %>%
+  arrange(desc(n))
+
+barrier_rank
+```
+```{r}
+barrier_rank %>%
+  ggplot(
+    aes(
+      reorder(section_h.barrier, n),
+      n
+    )
+  ) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Barriers to workforce adaptation",
+    x = "",
+    y = "Frequency"
+  )
+```
+
+```{r}
+n_staff <- nrow(data)
+
+future_demand <- data %>%
+  select(section_d.improve_skill) %>%
+  filter(!is.na(section_d.improve_skill)) %>%
+  mutate(skill = tolower(section_d.improve_skill)) %>%
+  mutate(skill = str_replace_all(skill, "[^a-z ]", " ")) %>%
+  mutate(skill = str_squish(skill)) %>%
+
+  mutate(skill_class = case_when(
+    str_detect(skill, "leadership|management") ~ "leadership",
+    str_detect(skill, "ict|digital|system") ~ "ict",
+    str_detect(skill, "policy") ~ "policy",
+    str_detect(skill, "data|analytics|analysis|m e|monitoring") ~ "m_and_e",
+    str_detect(skill, "tech|technical") ~ "tech",
+    TRUE ~ "other"
+  )) %>%
+  filter(skill_class != "other") %>%
+  count(skill_class) %>%
+  mutate(demand_rate = n / n_staff)
+
+current_readiness <- data %>%
+  select(
+    ict = section_d.ict_skill,
+    tech = section_d.tech_skill,
+    leadership = section_d.leadership_management,
+    policy = section_d.policy_analysis_and_implementation,
+    m_and_e = section_d.monitoring_evaluation
+  ) %>%
+  pivot_longer(everything(), names_to = "competency", values_to = "level") %>%
+  mutate(
+    level_num = case_when(
+      level == "low" ~ 1,
+      level == "medium" ~ 2,
+      level == "high" ~ 3
+    )
+  ) %>%
+  group_by(competency) %>%
+  summarise(
+    readiness_score = mean(level_num, na.rm = TRUE),
+    high_pct = mean(level == "high", na.rm = TRUE) * 100
+  )
+
+readiness_gap <- left_join(
+  current_readiness,
+  future_demand,
+  by = c("competency" = "skill_class")
+)
+
+ggplot(readiness_gap, aes(x = readiness_score, y = demand_rate)) +
+  geom_point(size = 4, color = "steelblue") +
+  geom_text(aes(label = competency), vjust = -1) +
+
+  scale_y_continuous(labels = percent_format()) +
+
+  labs(
+    title = "Future demand vs readiness (normalised model)",
+    x = "Current readiness score (1–3)",
+    y = "Demand rate (per staff)"
+  ) +
+
+  theme_minimal()
+```
+
 
 - Future workforce readiness
 - Digital transformation preparedness
