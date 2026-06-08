@@ -1,0 +1,653 @@
+---
+title: "KIPRE STAFF TRAINING NEEDS ASSESSMENT (TNA) REPORT"
+author: ""
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output: 
+  pdf_document:
+    latex_engine: pdflatex
+    toc: false
+    toc_depth: 2
+
+header-includes:
+  - \usepackage[table]{xcolor}
+  - \usepackage{multirow}
+  - \usepackage{booktabs}
+  - \usepackage{textgreek}
+  - \usepackage{setspace}
+  - \onehalfspacing
+  - \usepackage{array}
+  - \usepackage{colortbl}
+  - \usepackage[pdfpagemode=UseNone,bookmarks=false,bookmarksopen=false,hidelinks]{hyperref}
+  - \hypersetup{pdfmenubar=false,pdftoolbar=false,pdfstartview={XYZ null null 0.9}}
+  - \usepackage{titling}
+  - \pretitle{\begin{center}\LARGE\bfseries}
+  - \posttitle{\par\vspace{1em}
+    {\large Prepared by CStat. Patrick Mwaura (DSAS) \newline For \newline Head of HR, Mrs. Stella Nyambariga }\par\end{center}\vskip 7em}
+  - \preauthor{}\postauthor{}
+  - \predate{\begin{center}\large}\postdate{\par\end{center}}
+
+---
+
+
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 7,
+  fig.height = 5,
+  dpi = 300
+)
+
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(tidyverse)
+library(xtable)
+library(janitor)
+library(xtable)
+library(scales)
+library(janitor)
+
+
+```
+
+
+
+```{r}
+# Import data
+data <- read.csv("KIPRE_TNA_25-26_Final.csv")
+# Clean column names: replace spaces with underscores and convert to lowercase
+names(data) <- str_replace_all(names(data), " ", "_")
+names(data) <- tolower(names(data))
+
+# analysis useless variable
+meta_vars <- c(
+  "submissiondate", "start", "end", "today",
+  "meta.instanceid", "key", "submitterid",
+  "submittername", "attachmentspresent",
+  "attachmentsexpected", "status",
+  "reviewstate", "deviceid", "edits",
+  "formversion", "notexx", "notexxx",
+  "note_0", "note_1", "section_d.note_4"
+)
+# Remove them from the dataset
+data <- data %>%
+  dplyr::select(-any_of(meta_vars))
+# Assign an id to each row for tracking
+data <- data %>%
+  mutate(id = row_number())
+# Factor columns
+factor_vars <- c(2:5, 8:10, 17:21,24:31, 33, 46, 47, 61,63:66)
+data <- data %>%
+  mutate(across(all_of(factor_vars), as.factor))
+
+```
+
+## Background
+
+The primary purpose of this Training Needs Analysis (TNA) is to systematically assess institutional competency gaps and evaluate workforce preparedness. This evidence-based approach is designed to inform training priorities and guide strategic human capital development across the KIPRE.
+The assessment was conducted using a multi-dimensional questionnaire structured into specific modules to capture a holistic view of the workforce. These sections included:
+
+* Basic Information (Directorate, Age, and Sex of the employee)
+* Job Role and Responsibilities
+* Self Performances Assessing Questions
+* Skills and Copetency Assessment
+* Training History
+* Identification of Training Needs
+* Training Delivery Preferences
+* Organizational Support
+* Future Skills and Emerging Needs
+* Additional Comments
+
+By triangulating data from these domains, the analysis identifies not only current skill deficiencies but also the organizational support structures and delivery formats required to bridge them effectively.
+
+
+
+## Methodology
+
+The assessment was digitized via ODK Central and deployed from $20^{th}-28^{th}$ April of 2026. To ensure we captured a representative voice, we used a multi-channel approach—utilizing official email and professional WhatsApp groups. Participation was voluntary, positioned as a collaborative effort to co-design the organization’s future training roadmap.
+Data Processing & Analysis
+Once the collection window closed, raw data was ingested into R (v4.5.2). The analytical pipeline focused on cleaning, recoding qualitative responses for statistical depth, and aggregating the results to provide a granular view of needs across all Directorates and Divisions.
+
+
+## Workforce profile  
+
+
+A total of 80 employees, representing 42% of the 189 staff members currently at KIPRE, participated in this assessment. This respondent base spans 23 distinct divisions (see Table~\ref{tab:directorates}) across seven primary Directorates, ensuring the training roadmap reflects both the core scientific mandate and the essential administrative backbone of the institute. The distribution reveals a workforce concentrated within key technical hubs, most notably the Animal Sciences Welfare and Ethics and Research and Product Development Directorates.
+In the research domain, the Kenya Snakebite Research and Intervention (KSRIC) Division and the Welfare and Ethics (WE) Division emerged as the most represented units. This engagement from frontline technical staff—supported by a demographic where 51.2% of respondents are aged between 25 and 44—provides a robust foundation for identifying gaps in laboratory biosafety and modern research protocols. While the gender distribution is relatively balanced (see Table~\ref{tab:gender_age}) (45% female, 55% male), distinct generational trends are evident: the female cadre is most concentrated in the 35–44 age bracket (36.1%), whereas the male workforce peaks in the 45–54 bracket (34.1%).
+Administrative and strategic functions are equally well-mapped, with consistent representation from Corporate Services and the Office of the Director General. Notably, only 10% of respondents are aged 55 or older, indicating a predominantly mid-career workforce with significant long-term growth potential. This demographic profile highlights a strategic opportunity to implement cross-cutting training programmes that standardise administrative excellence and ensure the institution is prepared for future succession and evolving digital demands.
+
+
+```{r workforce-table, results='asis', echo=FALSE, warning=FALSE,message=FALSE}
+
+# 1. Prepare and aggregate data
+raw_counts <- data %>%
+  count(section_a.directorate, section_a.division_section) %>%
+  mutate(
+    Directorate = str_to_title(
+      str_replace_all(section_a.directorate, "_", " ")
+    ),
+    
+    Division = str_to_title(
+      str_replace_all(section_a.division_section, "_", " ")
+    )
+  ) %>%
+  
+  arrange(Directorate) %>%
+  
+  select(Directorate, Division, n)
+
+# 2. Identify where each new directorate starts
+group_positions <- which(!duplicated(raw_counts$Directorate))
+
+group_names <- raw_counts$Directorate[group_positions]
+
+# 3. Create LaTeX row-group headers
+header_commands <- paste0(
+  "\\midrule\n",
+  "\\multicolumn{2}{l}{\\textbf{",
+  group_names,
+  "}} \\\\\n",
+  "\\midrule\n"
+)
+
+add_list <- list(
+  pos = as.list(group_positions - 1),
+  command = header_commands
+)
+
+# 4. Final display table
+display_df <- raw_counts %>%
+  select(Division, n) %>%
+  
+  rename(
+    `Division / Section` = Division,
+    `Staff Count` = n
+  )
+
+# 5. Print LaTeX table
+print(
+  xtable(
+    display_df,
+    caption = c("Workforce distribution by directorate and division","tab:directorates"),
+    align = "llc"
+  ),
+  
+  type = "latex",
+  include.rownames = FALSE,
+  add.to.row = add_list,
+  comment = FALSE,
+  booktabs = TRUE,
+  caption.placement = "top",
+  
+  sanitize.text.function = identity
+)
+```
+
+
+```{r gender-age-table, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+
+
+# Define desired column order
+age_order <- c(
+  "under_25_years",
+  "25_34_years",
+  "35_44_years",
+  "45_54_years",
+  "55+_years"
+)
+
+# Generate table
+demographic_summary <- data %>%
+  
+  mutate(
+    section_a.age_bracket = factor(
+      section_a.age_bracket,
+      levels = age_order,
+      ordered = TRUE
+    )
+  ) %>%
+  
+  tabyl(section_a.gender, section_a.age_bracket) %>%
+  
+  adorn_totals(c("row", "col")) %>%
+  
+  adorn_percentages("row") %>%
+  
+  adorn_pct_formatting(digits = 1) %>%
+  
+  adorn_ns()
+
+# Clean column names
+colnames(demographic_summary) <- c(
+  "Gender",
+  "Under 25 years",
+  "25-34 years",
+  "35-44 years",
+  "45-54 years",
+  "55+ years",
+  "Total"
+)
+
+# Print using xtable
+print(
+  xtable(
+    demographic_summary,
+    caption = c("Gender distribution across age brackets","tab:gender"),
+    
+    align = paste0(
+      "l",
+      paste(rep("c", ncol(demographic_summary)), collapse = "")
+    )
+  ),
+  
+  type = "latex",
+  include.rownames = FALSE,
+  booktabs = TRUE,
+  caption.placement = "top",
+  comment = FALSE
+)
+```
+
+
+```{r grade-service-table, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+
+# define correct ordering explicitly
+service_levels <- c(
+  "Less Than 1 Year",
+  "1 3 Years",
+  "4 7 Years",
+  "8 15 Years",
+  "16+ Years"
+)
+
+grade_summary <- data %>%
+  
+  mutate(
+    Job_Grade = str_to_upper(section_a.job_grade),
+    Job_Grade_num = as.numeric(str_extract(Job_Grade, "\\d+")),
+    
+    Length_Service = section_a.length_service %>%
+      str_replace_all("_", " ") %>%
+      str_to_title()
+  ) %>%
+  
+  count(Job_Grade, Job_Grade_num, Length_Service) %>%
+  
+  # enforce row ordering
+  arrange(Job_Grade_num, Length_Service) %>%
+  
+  select(-Job_Grade_num) %>%
+  
+  pivot_wider(
+    names_from = Length_Service,
+    values_from = n,
+    values_fill = 0
+  ) %>%
+  
+  mutate(
+    Total = rowSums(across(where(is.numeric)))
+  )
+
+# ---- FORCE COLUMN ORDER (this is the missing fix) ----
+grade_summary <- grade_summary %>%
+  select(
+    Job_Grade,
+    all_of(service_levels),
+    Total
+  )
+
+# ---- FORCE ROW ORDER ----
+grade_summary <- grade_summary %>%
+  arrange(as.numeric(str_extract(Job_Grade, "\\d+")))
+
+# convert to matrix so xtable cannot reorder anything
+grade_matrix <- as.matrix(grade_summary)
+
+# print
+print(
+  xtable(
+    grade_matrix,
+    caption = "Job grade distribution by length of service",
+    align = c("l", rep("c", ncol(grade_matrix)))
+  ),
+  
+  type = "latex",
+  include.rownames = FALSE,
+  booktabs = TRUE,
+  caption.placement = "top",
+  comment = FALSE
+)
+```
+
+```{r, echo=FALSE,include=F, warning=FALSE, message=FALSE}
+
+
+# 1. Summary by Directorate and Division
+org_summary <- data %>%
+  count(section_a.directorate, section_a.division_section, name = "Staff_Count") %>%
+  mutate(
+    Directorate = str_to_title(str_replace_all(section_a.directorate, "_", " ")),
+    Division = str_to_title(str_replace_all(section_a.division_section, "_", " "))
+  ) %>%
+  select(Directorate, Division, Staff_Count)
+
+# 2. Gender and Age Distribution
+demographic_summary <- data %>%
+  tabyl(section_a.gender, section_a.age_bracket) %>%
+  adorn_totals(c("row", "col")) %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 1) %>%
+  adorn_ns() # This shows both Count and Percentage (%)
+
+# 3. Job Grade and Service Length
+grade_summary <- data %>%
+  count(section_a.job_grade, section_a.length_service) %>%
+  pivot_wider(names_from = section_a.length_service, values_from = n, values_fill = 0)
+
+# Print results to console
+print("--- Staff Count by Division ---")
+print(org_summary)
+
+print("--- Gender by Age Bracket (%) ---")
+print(demographic_summary)
+
+print("--- Job Grade by Length of Service ---")
+print(grade_summary)
+
+```
+
+```{r setup3, include=FALSE}
+data <- data %>%
+  mutate(
+    section_a.division_section = recode(
+      section_a.division_section,
+
+      "corporate_communication_division" =
+        "CCD",
+
+      "data_science_and_analytics_section" =
+        "DSAS",
+
+      "evolutionary_ecology_conservation_and_ecosystem_health_division" =
+        "EECEHD",
+
+      "finance_and_accounts_division" =
+        "FAD",
+
+      "human_resource_and_administration_division" =
+        "HRAD",
+
+      "infectious_diseases_and_one_health_division" =
+        "IDOHD",
+
+      "information_communication_technology_division" =
+        "ICTD",
+
+      "kenya_snakebite_research_and_intervention_division" =
+        "KSRID",
+
+      "laboratory_services_section" =
+        "LSS",
+
+      "national_laboratory_animal_breeding_division" =
+        "NLABD",
+
+      "non_communicable_diseases_division" =
+        "NCDD",
+
+      "partnerships_and_grants_management_division" =
+        "PGMD",
+
+      "planning_and_strategy_division" =
+        "PSD",
+
+      "reproductive_health_and_biology_division" =
+        "RHBD",
+
+      "veterinary_clinical_and_diagnostics_services_division" =
+        "VCDSD",
+
+      "welfare_and_ethics_division" =
+        "WED"
+    )
+  )
+```
+
+
+## Objectives
+
+1. Quantify workforce characteristics (gender, age, grade, etc.), current competency levels, training exposure, and reported skill gaps.
+
+
+
+
+```{r}
+## Setup: load packages and fix seed
+library(tidyverse)    # data manipulation and ggplot2
+library(janitor)      # clean column names
+library(psych)        # cronbach's alpha, PCA
+library(MASS)         # polr for ordinal logistic
+library(ordinal)      # optionally for clm
+library(gtsummary)    # summary tables
+library(flextable)    # export tables
+library(DT)           # interactive tables
+library(networkD3)    # Sankey diagrams
+set.seed(123)         # reproducible seed
+
+
+```
+
+```{r}
+## 1. Load and initial clean
+data_raw <- read_csv("KIPRE_TNA_25-26_Final.csv")
+
+# Create a stable ID (row number) and clean names
+data_clean <- data_raw %>%
+  mutate(id = row_number()) %>%
+  clean_names()  # janitor: lower_snake names
+
+# Remove metadata/noise if present (e.g. system columns not in sections A-I)
+# (Assume metadata columns: submission_date, note fields, instanceID, etc.)
+meta_vars <- c("submissiondate", "submitterid", "submittername", 
+               "attachments_present", "attachments_expected", "status", 
+               "reviewstate", "deviceid", "edits", "formversion", "notexx", "notexxx")
+data_clean <- data_clean %>% select(-any_of(meta_vars))
+
+```
+
+```{r}
+## 2. Type conversion based on measurement level
+# (a) Nominal/categorical factors (unsorted)
+nominal_vars <- c("section_a_directorate", "section_a_division_section",
+                  "section_a_gender", "section_a_age_bracket",
+                  "section_a_job_grade", "section_a_job_designation",
+                  "section_a_length_service",
+                  "section_b_task_change", "section_h_support_training",
+                  "section_g_training_time")  # add as needed
+data_clean <- data_clean %>%
+  mutate(across(all_of(nominal_vars), as.factor))
+
+# (b) Ordinal scales: define levels explicitly
+skill_levels <- c("low", "medium", "high")
+perf_levels  <- c("poor","fair","good","excellent")
+target_levels <- c("none","partially","fully")
+data_clean <- data_clean %>%
+  mutate(
+    # Section D skills
+    across(starts_with("section_d."),
+           ~ factor(.x, levels=skill_levels, ordered=TRUE)),
+    # Performance (section C)
+    section_c_rate_job_performance = 
+      factor(str_to_lower(section_c_rate_job_performance), 
+             levels = perf_levels, ordered=TRUE),
+    section_c_met_performance_targets =
+      factor(str_to_lower(section_c_met_performance_targets),
+             levels = target_levels, ordered=TRUE),
+    section_b_role_clearly = 
+      factor(str_to_lower(section_b_role_clearly),
+             levels = c("very_clear","clear","moderate","unclear"), ordered=TRUE)
+  )
+
+# (c) Binary yes/no -> 0/1 numeric
+binary_vars <- c("section_b_job_description",
+                 "section_e_attended_training",
+                 "section_e_acquired_skill")
+data_clean <- data_clean %>%
+  mutate(across(all_of(binary_vars),
+                ~ case_when(
+                    tolower(.x) %in% c("yes","1", "true")  ~ 1,
+                    tolower(.x) %in% c("no","0", "false")  ~ 0,
+                    TRUE ~ NA_real_
+                  )))
+
+```
+
+
+```{r}
+## 3. Parse multi-response fields into long format
+# For each multi-choice field, split by space or delimiter and separate into long format
+multi_vars <- c("section_e_training_1_yes","section_e_training_2_yes", 
+                "section_e_training_3_yes", "section_e_training_4_yes", 
+                "section_e_training_5_yes", "section_e_training_6_yes",
+                "section_e_training_1_no","section_e_training_2_no", 
+                "section_e_training_3_no","section_e_training_4_no",
+                "section_e_training_5_no","section_e_training_6_no",
+                "section_f_training_type",
+                "section_g_training_mode1", "section_g_preffered_duration",
+                "section_h_barrier", "section_i_emerging_trends")
+# Convert each to long by splitting (tidyr::separate_rows)
+for(col in multi_vars){
+  if(col %in% names(data_clean)){
+    data_clean <- data_clean %>%
+      mutate(!!sym(col) := str_replace_all(.data[[col]], "_", " ")) %>%  # unify delim
+      separate_rows(all_of(col), sep = " +")  # split on whitespace
+  }
+}
+
+```
+
+```{r}
+## 4. Compute key indices
+# Competency index = mean of skills (section_d.*) per respondent
+skill_cols <- grep("^section_d\\.(tech_skill|ict_skill|comm_skill|leadership_management|policy_analysis_and_implementation|finance_management|customer_service|monitoring_evaluation)$", 
+                   names(data_clean), value=TRUE)
+data_clean <- data_clean %>%
+  rowwise() %>%
+  mutate(competency_index = mean(c_across(all_of(skill_cols)), na.rm=TRUE)) %>%
+  ungroup()
+
+# Training exposure = count of 'yes' trainings (assuming each section_e_training_i_yes not empty indicates attended)
+training_yes <- paste0("section_e_training_", 1:6, "_yes")
+data_clean <- data_clean %>%
+  mutate(training_exposure = rowSums(!is.na(select(., all_of(training_yes))) & select(., all_of(training_yes)) != ""))
+
+```
+
+```{r}
+## 5. Reliability and dimensionality (Cronbach's alpha and PCA)
+alpha_result <- psych::alpha(select(data_clean, all_of(skill_cols)), na.rm=TRUE)
+print(alpha_result$total$raw_alpha)  # Cronbach's alpha coefficient
+# If alpha <0.7, warn that scale reliability is low
+
+pca_res <- prcomp(select(data_clean, all_of(skill_cols)), center=TRUE, scale.=TRUE)
+summary(pca_res)
+# Scree plot or variance explained could guide if skills form one factor or multiple.
+
+```
+
+```{r}
+## 6. Handle missingness 
+# Report missingness summary
+missing_summary <- data_clean %>% summarise(across(everything(), ~sum(is.na(.))))
+# Impute or drop if needed: here we do simple median imputation for numeric, mode for factor (as an option)
+data_clean <- data_clean %>%
+  mutate(across(all_of(skill_cols), ~ ifelse(is.na(.), median(., na.rm=TRUE), .))) %>%
+  mutate(competency_index = ifelse(is.na(competency_index), median(competency_index, na.rm=TRUE), competency_index))
+# (More advanced imputation could be added; flagging cases with >50% NAs.)
+
+```
+
+
+```{r}
+## 7. Collapse job_designation into job_family (via regex)
+# Example grouping: map keywords to broader families
+data_clean <- data_clean %>%
+  mutate(job_family = case_when(
+    str_detect(str_to_lower(section_a_job_designation), "scientist|research") ~ "Research",
+    str_detect(str_to_lower(section_a_job_designation), "technolog|ict|engineer") ~ "ICT/Tech",
+    str_detect(str_to_lower(section_a_job_designation), "finance|account") ~ "Finance",
+    str_detect(str_to_lower(section_a_job_designation), "admin|clerical") ~ "Admin Support",
+    TRUE ~ "Other"
+  )) %>% 
+  mutate(job_family = factor(job_family))
+
+```
+
+```{r}
+## 8. Descriptive tables and plots
+
+# 8a. Frequency tables by group (using gtsummary)
+# Example: demographics by job_grade
+tbl_demog <- data_clean %>%
+  select(section_a_gender, section_a_age_bracket, section_a_job_grade) %>%
+  tbl_summary(by = section_a_job_grade,
+              statistic = list(all_categorical() ~ "{n} ({p}%)"),
+              missing = "no") %>%
+  bold_labels() %>%
+  as_gt()  # convert to gt for printing or saving
+# Save demographic table
+gtsave(as_gt(tbl_demog), "demographics_by_grade.html")
+
+# 8b. Heatmap of mean competency by job_grade vs directorate
+heat_data <- data_clean %>%
+  group_by(section_a_job_grade, section_a_directorate) %>%
+  summarise(mean_comp = mean(competency_index, na.rm=TRUE)) 
+ggplot(heat_data, aes(x=section_a_job_grade, y=section_a_directorate, fill=mean_comp)) +
+  geom_tile(color="white") +
+  scale_fill_viridis_c(name="Mean Competency") +
+  labs(title="Mean Competency by Grade and Directorate") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle=45, hjust=1))
+ggsave("heatmap_competency.png", width=6, height=5)
+
+# 8c. Stacked bar of training mode preferences
+mode_data <- data_clean %>%
+  separate_rows(section_g_training_mode1, sep=" +") %>%
+  filter(section_g_training_mode1 != "") %>%
+  count(section_a_job_grade, section_g_training_mode1) 
+ggplot(mode_data, aes(x=section_a_job_grade, y=n, fill=section_g_training_mode1)) +
+  geom_bar(stat="identity") +
+  labs(x="Job Grade", y="Count", fill="Mode") +
+  ggtitle("Preferred Training Modes by Job Grade") +
+  theme_minimal()
+ggsave("stacked_bar_modes.png", width=6, height=4)
+
+```
+
+
+```{r}
+## 9. Sankey/Flow diagrams (training->skills)
+# Example: networkD3 Sankey of training attendance -> acquired skill (yes/no)
+# (This requires aggregating counts of flows)
+flow_df <- data_clean %>% 
+  filter(section_e_attended_training == 1) %>%
+  count(section_e_training_1_yes, section_e_acquired_skill)
+# Format for networkD3
+nodes <- data.frame(name = c(unique(flow_df$section_e_training_1_yes), "Acquired", "Not Acquired"))
+links <- flow_df %>% 
+  transmute(source = match(section_e_training_1_yes, nodes$name)-1,
+            target = ifelse(section_e_acquired_skill==1, 
+                            which(nodes$name=="Acquired")-1, 
+                            which(nodes$name=="Not Acquired")-1),
+            value = n)
+sankeyNetwork(Links = links, Nodes = nodes,
+              Source = 'source', Target = 'target', Value = 'value',
+              NodeID = 'name', fontSize=12, nodeWidth=30)
+# (Alternatively use DiagrammeR::mermaid() for static flow diagrams)
+
+```
+

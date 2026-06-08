@@ -22,7 +22,7 @@ header-includes:
   - \usepackage{titling}
   - \pretitle{\begin{center}\LARGE\bfseries}
   - \posttitle{\par\vspace{1em}
-    {\large Prepared by CStat. Patrick Mwaura (DSAS) \newline For \newline Head of HR, Mrs. Stella Nyambariga }\par\end{center}\vskip 7em}
+    {\large Human Resource Division \newline Prepared by CStat. Patrick Mwaura (DSAS) \newline  }\par\end{center}\vskip 7em}
   - \preauthor{}\postauthor{}
   - \predate{\begin{center}\large}\postdate{\par\end{center}}
 
@@ -50,6 +50,14 @@ library(janitor)
 library(xtable)
 library(scales)
 library(janitor)
+library(psych)        # cronbach's alpha, PCA
+library(MASS)         # polr for ordinal logistic
+library(ordinal)      # optionally for clm
+library(gtsummary)    # summary tables
+library(flextable)    # export tables
+library(DT)           # interactive tables
+library(networkD3)    # Sankey diagrams
+set.seed(123)         # reproducible seed
 
 
 ```
@@ -75,63 +83,22 @@ meta_vars <- c(
 )
 # Remove them from the dataset
 data <- data %>%
-  select(-any_of(meta_vars))
+  dplyr::select(-any_of(meta_vars))
 # Assign an id to each row for tracking
 data <- data %>%
   mutate(id = row_number())
-
-```
-
-```{r setup, include=FALSE}
+# Factor columns
+factor_vars <- c(2:5, 8:10, 17:21,24:31, 33, 46, 47, 61,63:66)
 data <- data %>%
-  mutate(
-    section_a.gender = as.factor(section_a.gender),
-    section_a.age_bracket = as.factor(section_a.age_bracket),
-    section_a.job_grade = as.factor(section_a.job_grade),
-    section_a.directorate = as.factor(section_a.directorate),
-    section_a.division_section = as.factor(section_a.division_section),
-    section_d.tech_skill = as.factor(section_d.tech_skill),section_d.ict_skill = as.factor(section_d.ict_skill),section_d.comm_skill = as.factor(section_d.comm_skill),section_d.leadership_management = as.factor(section_d.leadership_management),section_d.policy_analysis_and_implementation = as.factor(section_d.policy_analysis_and_implementation),section_d.finance_management = as.factor(section_d.finance_management),section_d.customer_service = as.factor(section_d.customer_service),section_d.monitoring_evaluation = as.factor(section_d.monitoring_evaluation),section_e.training_history = as.factor(section_e.training_history),section_e.training_needs = as.factor(section_e.training_needs),section_e.training_delivery_preference = as.factor(section_e.training_delivery_preference),section_e.organizational_support = as.factor(section_e.organizational_support),section_e.future_skills_and_emerging_needs = as.factor(section_e.future_skills_and_emerging_needs)
-  )
-
+  mutate(across(all_of(factor_vars), as.factor))
 
 ```
 
+## Executive Summary
 
-```{r setup2, include=FALSE}
-# Clean up
-data[[8]] <- recode(
-  data[[8]],
-  "animal_sciences_welfare_and_ethics_directorate" =
-    "ASWED",
-  "capacity_building_partnership_and_grant_management_directorate" =
-    "CBPGMD",
-  "corporate_services_directorate" =
-    "CSD",
-  "corporation_secretary_legal_services_directorate" =
-    "CSLSD",
-  "internal_audit_and_risk_assurance_directorate" =
-    "IARAD",
-  "office_of_the_director_general" =
-    "ODG",
-  "research_and_product_development_directorate" =
-    "RPDD"
-)
-```
-
-
-
-
-\definecolor{softred}{RGB}{255,200,200}
-\definecolor{softyellow}{RGB}{255,255,200}
-\definecolor{softgreen}{RGB}{200,255,200}
-\definecolor{factorgray}{RGB}{220,220,220} 
-
-\section*{Executive Summary}
 
 
 \newpage
-
-
 ## Background
 
 The primary purpose of this Training Needs Analysis (TNA) is to systematically assess institutional competency gaps and evaluate workforce preparedness. This evidence-based approach is designed to inform training priorities and guide strategic human capital development across the KIPRE.
@@ -150,6 +117,16 @@ The assessment was conducted using a multi-dimensional questionnaire structured 
 
 By triangulating data from these domains, the analysis identifies not only current skill deficiencies but also the organizational support structures and delivery formats required to bridge them effectively.
 
+## Objectives
+
+The primary goal of this assessment was to capture KIPRE employees' perspectives on their work environment, competencies, and developmental needs. By analyzing these self-reported insights, KIPRE can move away from ad-hoc training decisions and build a people-first human capital strategy. Specifically, this assessment aimed to:
+
+* Map perceived skill gaps by uncovering where staff across different directorates, divisions, and job grades feel they lack the technical or administrative confidence to excel.
+* Evaluate the felt impact of past training by documenting how effective staff believe previous workshops were and capturing the personal or structural hurdles they feel prevent them from using those skills.
+* Capture bottom-up training priorities by listening directly to frontline operational needs and career progression goals to build a highly responsive institutional training roadmap.
+* Tailor training delivery to staff preferences by identifying the exact learning formats, durations, and schedules that employees feel would best fit their workflows.
+* Identify employee-perceived workplace bottlenecks by revealing the cultural or structural friction points that staff believe are currently limiting their productivity.
+* Gauge readiness for future innovations by exploring how prepared and confident the team feels regarding emerging scientific and technological trends in research.
 
 
 ## Methodology
@@ -158,14 +135,13 @@ The assessment was digitized via ODK Central and deployed from $20^{th}-28^{th}$
 Data Processing & Analysis
 Once the collection window closed, raw data was ingested into R (v4.5.2). The analytical pipeline focused on cleaning, recoding qualitative responses for statistical depth, and aggregating the results to provide a granular view of needs across all Directorates and Divisions.
 
+## Results
+
+### Workforce profile  
 
 
-
-## Workforce profile  
-
-
-A total of 80 employees, representing 42% of the 189 staff members currently at KIPRE, participated in this assessment. This respondent base spans 23 distinct divisions across seven primary Directorates, ensuring the training roadmap reflects both the core scientific mandate and the essential administrative backbone of the institute. The distribution reveals a workforce concentrated within key technical hubs, most notably the Animal Sciences Welfare and Ethics and Research and Product Development Directorates.
-In the research domain, the Kenya Snakebite Research and Intervention Division and the Welfare and Ethics Division emerged as the most represented units. This engagement from frontline technical staff—supported by a demographic where 51.2% of respondents are aged between 25 and 44—provides a robust foundation for identifying gaps in laboratory biosafety and modern research protocols. While the gender distribution is relatively balanced (45% female, 55% male), distinct generational trends are evident: the female cadre is most concentrated in the 35–44 age bracket (36.1%), whereas the male workforce peaks in the 45–54 bracket (34.1%).
+A total of 80 employees, representing 42% of the 189 staff members currently at KIPRE, participated in this assessment. This respondent base spans 23 distinct divisions (see Table \ref{tab:directorates}) across seven primary Directorates, ensuring the training roadmap reflects both the core scientific mandate and the essential administrative backbone of the institute. The distribution reveals a workforce concentrated within key technical hubs, most notably the Animal Sciences Welfare and Ethics and Research and Product Development Directorates.
+In the research domain, the Kenya Snakebite Research and Intervention (KSRIC) Division and the Welfare and Ethics (WE) Division emerged as the most represented units. This engagement from frontline technical staff—supported by a demographic where 51.2% of respondents are aged between 25 and 44—provides a robust foundation for identifying gaps in laboratory biosafety and modern research protocols. While the gender distribution is relatively balanced (see Table \ref{tab:gender_age}) (45% female, 55% male), distinct generational trends are evident: the female cadre is most concentrated in the 35–44 age bracket (36.1%), whereas the male workforce peaks in the 45–54 bracket (34.1%).
 Administrative and strategic functions are equally well-mapped, with consistent representation from Corporate Services and the Office of the Director General. Notably, only 10% of respondents are aged 55 or older, indicating a predominantly mid-career workforce with significant long-term growth potential. This demographic profile highlights a strategic opportunity to implement cross-cutting training programmes that standardise administrative excellence and ensure the institution is prepared for future succession and evolving digital demands.
 
 
@@ -220,7 +196,7 @@ display_df <- raw_counts %>%
 print(
   xtable(
     display_df,
-    caption = "Workforce distribution by directorate and division",
+    caption = "Workforce distribution by directorate and division", label="tab:directorates",
     align = "llc"
   ),
   
@@ -284,7 +260,7 @@ colnames(demographic_summary) <- c(
 print(
   xtable(
     demographic_summary,
-    caption = "Gender distribution across age brackets",
+    caption = "Gender distribution across age brackets", label="tab:gender_age",
     
     align = paste0(
       "l",
@@ -300,8 +276,12 @@ print(
 )
 ```
 
+Based on the voluntary sample of 80 respondents, the data highlights a heavily concentrated middle-tier profile where a staggering 87.5% of all participants belong to just five core grades (NM7, NM8, NM10, NM11, and NM12) (see Table \ref{tab:lengthofservice}). This cluster is overwhelmingly driven by NM8, which represents the single largest respondent segment at 28.7% (23 individuals), followed closely by NM10 at 15.0%. Long-tenured staff are heavily represented, with over a third (36.2%) of the entire sample reporting 16 or more years of service. While this high veteran participation indicates deep institutional memory, its concentration within specific cohorts—such as NM11 where 80% of respondents have 16+ years of tenure—likely reflects a strong self-selection bias where long-serving employees felt a greater stake in completing the survey than newer hires. Furthermore, the active participation of both entry-level staff and 16+ year veterans within identical grades (such as NM8 and NM12) indicates that structural bottlenecks or career stagnation are highly visible and sensitive topics among the voluntary respondents.
+
+
 
 ```{r grade-service-table, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+
 
 # define correct ordering explicitly
 service_levels <- c(
@@ -313,7 +293,6 @@ service_levels <- c(
 )
 
 grade_summary <- data %>%
-  
   mutate(
     Job_Grade = str_to_upper(section_a.job_grade),
     Job_Grade_num = as.numeric(str_extract(Job_Grade, "\\d+")),
@@ -322,12 +301,10 @@ grade_summary <- data %>%
       str_replace_all("_", " ") %>%
       str_to_title()
   ) %>%
-  
   count(Job_Grade, Job_Grade_num, Length_Service) %>%
   
   # enforce row ordering
   arrange(Job_Grade_num, Length_Service) %>%
-  
   select(-Job_Grade_num) %>%
   
   pivot_wider(
@@ -335,12 +312,11 @@ grade_summary <- data %>%
     values_from = n,
     values_fill = 0
   ) %>%
-  
   mutate(
     Total = rowSums(across(where(is.numeric)))
   )
 
-# ---- FORCE COLUMN ORDER (this is the missing fix) ----
+# ---- FORCE COLUMN ORDER ----
 grade_summary <- grade_summary %>%
   select(
     Job_Grade,
@@ -352,6 +328,15 @@ grade_summary <- grade_summary %>%
 grade_summary <- grade_summary %>%
   arrange(as.numeric(str_extract(Job_Grade, "\\d+")))
 
+# ---- ADD PERCENTAGE COLUMN (New Fix) ----
+# Calculates percentage out of the cumulative sample size (sum of Total)
+grand_total <- sum(grade_summary$Total)
+
+grade_summary <- grade_summary %>%
+  mutate(
+    `Percentage (%)` = sprintf("%.1f", (Total / grand_total) * 100)
+  )
+
 # convert to matrix so xtable cannot reorder anything
 grade_matrix <- as.matrix(grade_summary)
 
@@ -359,21 +344,20 @@ grade_matrix <- as.matrix(grade_summary)
 print(
   xtable(
     grade_matrix,
-    caption = "Job grade distribution by length of service",
+    caption = "Job grade distribution by length of service (Voluntary Survey)", 
+    label ="tab:lengthofservice",
     align = c("l", rep("c", ncol(grade_matrix)))
   ),
-  
   type = "latex",
   include.rownames = FALSE,
   booktabs = TRUE,
   caption.placement = "top",
   comment = FALSE
 )
+
 ```
 
 ```{r, echo=FALSE,include=F, warning=FALSE, message=FALSE}
-
-
 # 1. Summary by Directorate and Division
 org_summary <- data %>%
   count(section_a.directorate, section_a.division_section, name = "Staff_Count") %>%
@@ -409,6 +393,23 @@ print(grade_summary)
 ```
 
 ```{r setup3, include=FALSE}
+
+data<- data %>% mutate(section_a.directorate = recode(section_a.directorate,"animal_sciences_welfare_and_ethics_directorate" =
+    "ASWED",
+  "capacity_building_partnership_and_grant_management_directorate" =
+    "CBPGMD",
+  "corporate_services_directorate" =
+    "CSD",
+  "corporation_secretary_legal_services_directorate" =
+    "CSLSD",
+  "internal_audit_and_risk_assurance_directorate" =
+    "IARAD",
+  "office_of_the_director_general" =
+    "ODG",
+  "research_and_product_development_directorate" =
+    "RPDD" ) )
+
+
 data <- data %>%
   mutate(
     section_a.division_section = recode(
@@ -463,28 +464,11 @@ data <- data %>%
         "WED"
     )
   )
+
 ```
 
-## 1. Which critical competency gaps exist across directorates, divisions, and job grades, and which areas require immediate training intervention?
 
-This question helps management identify
-
-- High-priority skill deficiencies
-- Departments with the greatest capacity gaps
-- Staff categories requiring urgent support
-
-Likely outputs
-
-- Competency gap heatmaps
-- Directorate ranking tables
-- Priority training matrix
-- Skill deficiency frequencies
-
-Likely recommendations
-
-- Targeted capacity-building programmes
-- Directorate-specific training plans
-- Prioritised budget allocation
+## Objective 1: Perceived skill gaps
 
 ```{r}
 # Select, clean, and reshape data for the gap analysis
@@ -510,9 +494,7 @@ competencies <- c(
 )
 ```
 
-The baseline institutional data establishes that while the organization operates from a fundamentally stable footing, it faces a pervasive mid-level capability ceiling. Across all evaluated competencies, the workforce maintains a baseline Average Severity Score of 0.662, with a healthy 37.0% of responses indicating High Proficiency (Safe Zone) and only a minimal 3.3% falling into the Low Proficiency (Critical Alert Zone).However, a deeper look into the specific competency areas reveals that this stability is heavily anchored by general operations, specifically Comm (55.0% High), Customer (55.0% High), and baseline Tech applications (48.8% High). When these general strengths are set aside, a critical structural vulnerability emerges: a massive 59.7% company-wide majority of competencies sit clustered within the Medium Proficiency (Warning Zone). This exposure is most acute within the organization's specialized technical and regulatory pillars—specifically ICT (Information and Communications Technology) and Policy implementation—where 72.5% and 71.2% of the workforce, respectively, reside in this warning track.This profile diagnoses an organization whose staff possess excellent general baseline skills, but encounter a clear operational ceiling when handling advanced ICT core infrastructure and specialized Policy requirements. Rather than a widespread institutional crisis, the data uncovers a highly focused training mandate: strategic development resources must pivot away from generic corporate courses, and instead be aggressively targeted toward formalizing internal capacity-building pipelines for advanced ICT systems management, Monitoring & Evaluation (M&E), and Policy Implementation.
-
-```{r, include=FALSE}
+```{r overallserverity, results='asis', echo=FALSE, warning=FALSE,message=FALSE}
 # Data Processing Pipeline
 gap_long <- gap_analysis_data %>%
   pivot_longer(
@@ -546,6 +528,7 @@ options(xtable.comment = FALSE) # Removes the default raw LaTeX comment banner
 xtab <- xtable(
   overall_metrics_clean, 
   caption = "Overall Institutional Competency Gap Profile",
+  label="tab:overallseverity",
   align   = "lcccc" # Left aligns table header, centers all data columns
 )
 
@@ -555,20 +538,9 @@ print(
   type = "latex", 
   include.rownames = FALSE, # Cleans out the default row index number column (1)
   booktabs = TRUE,          # Employs clean executive horizontal table lines
-  table.placement = "H"     # Forces LaTeX to lock the table position exactly here
+  table.placement = "ht"     # Forces LaTeX to lock the table position exactly here
 )
 ```
-\begin{table}
-\centering
-\caption{Overall Institutional Competency Gap Profile} 
-\begin{tabular}{cccc}
-  \toprule
-Average Severity Score & High Proficiency (\%) & Medium Proficiency (\%) & Low Proficiency (\%) \\ 
-  \midrule
-0.66 & 37.00 & 59.70 & 3.30 \\ 
-   \bottomrule
-\end{tabular}
-\end{table}
 
 
 ```{r , fig.height=6, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
@@ -664,7 +636,7 @@ ggplot(overall_gap_summary, aes(x = competency, y = proportion, fill = level)) +
 ```
 
 
-```{r, fig.height=8, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+```{r}
 # Configuration
 lambda <- 5 
 
@@ -746,11 +718,9 @@ ggplot(directorate_gap, aes(x = competency, y = directorate, fill = shrink_gap, 
     plot.title = element_text(face = "bold", size = 14),
     plot.caption = element_text(size = 8, hjust = 0, color = "grey40")
   )
-
 ```
 
-```{r division_heatmap, fig.height=8, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
-
+```{r}
 # 1. Configuration & Colors
 lambda <- 5 
 color_safe    <- "#2E7D32" # Deep Green
@@ -844,11 +814,11 @@ ggplot(division_gap, aes(x = competency, y = division, fill = shrink_gap, alpha 
     plot.title = element_text(face = "bold", size = 12),
     plot.caption = element_text(size = 7, hjust = 0, color = "grey40")
   )
+
 ```
 
 
-
-```{r,fig.height=8, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+```{r}
 job_grade_gap <- gap_long %>%
   
   group_by(job_grade, competency) %>%
@@ -967,518 +937,19 @@ ggplot(job_grade_gap, aes(x = competency, y = job_grade, fill = shrink_gap, alph
 ```
 
 
-## 2. To what extent are employees adequately prepared to meet emerging organisational, technological, and policy-related demands?
+### Objevtive 2: Perceived impact of past training
 
-```{r}
-# Create the dataset
-future_readiness <- data %>%
-  select(
-#Baseline variables
-    section_a.directorate,
-    section_a.division_section,
-    section_a.job_grade,
 
-    # current preparedness
-    section_d.tech_skill,
-    section_d.ict_skill,
-    section_d.leadership_management,
-    section_d.policy_analysis_and_implementation,
-    section_d.monitoring_evaluation,
+### Objective 3: Perceived Training priorities
 
-    # perceived improvement needs
-    section_d.improve_skill,
+### Objective 4: Training delivery preferences
 
-    # future training requirements
-    starts_with("section_f.relevant_training_curr_role_"),
-    starts_with("section_f.career_progression_training_"),
 
-    section_f.level_training_needs,
-    section_f.training_type,
+### Objective 5: Perceived workplace bottlenecks 
 
-    # organisational adaptability
-    section_h.support_training,
-    section_h.barrier,
+### Objective 6 : Innovation and innovation readiness
 
-    # future trends
-    section_i.emerging_trends,
 
-    # future skills
-    starts_with("section_i.new_skill_you_need_")
-  )
+## Conclusion and Recommendations
 
-
-readiness_core <- data %>%
-  select(
-    section_a.directorate,
-    section_a.division_section,
-    section_a.job_grade,31:39
-  )
-
-training_demand <- future_readiness %>%
-  select(
-    section_d.improve_skill,
-    starts_with("section_f."),
-    section_h.support_training,
-    section_h.barrier,
-    section_i.emerging_trends,
-    starts_with("section_i.new_skill_you_need_")
-  )
-
-
-
-```
-
-```{r}
-readiness_long <- readiness_core %>%
-  pivot_longer(
-    cols = c(
-      section_d.tech_skill,
-      section_d.ict_skill,
-      section_d.leadership_management,
-      section_d.policy_analysis_and_implementation,
-      section_d.monitoring_evaluation,
-      section_d.comm_skill,
-      section_d.finance_management,
-      section_d.customer_service,
-      section_d.improve_skill
-    ),
-    names_to = "competency",
-    values_to = "level"
-  ) %>%
-  mutate(
-    level = str_to_lower(trimws(level)),
-    readiness_score = case_when(
-      level == "high"   ~ 0,
-      level == "medium" ~ 1,
-      level == "low"    ~ 2,
-      TRUE              ~ NA_real_
-    )
-  )
-
-overall_readiness_metrics <- readiness_long %>%
-  filter(!is.na(level), !is.na(readiness_score)) %>% 
-  summarise(
-    `Average Readiness Deficit Score` = round(mean(readiness_score), 3),
-    `High Readiness (%)`   = round(mean(level == "high") * 100, 1),
-    `Medium Readiness (%)` = round(mean(level == "medium") * 100, 1),
-    `Low Readiness (%)`    = round(mean(level == "low") * 100, 1)
-  )
-
-
-overall_readiness_plot <- readiness_long %>%
-  filter(!is.na(level), !is.na(readiness_score)) %>% 
-  
-  group_by(competency, level) %>%
-  summarise(n = n(), .groups = "drop") %>% 
-  
-  group_by(competency) %>%
-  mutate(
-    proportion = n / sum(n)
-  ) %>% 
-  ungroup()
-
-overall_readiness_plot <- overall_readiness_plot %>%
-  mutate(level = factor(level, levels = c("low", "medium", "high")))
-
-```
-
-
-```{r, include=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
-options(xtable.comment = FALSE)
-
-xtab_readiness <- xtable(
-  overall_readiness_metrics,
-  caption = "Overall Institutional Future Readiness Profile",
-  align   = "lcccc"
-)
-
-print(
-  xtab_readiness,
-  type = "latex",
-  include.rownames = FALSE,
-  booktabs = TRUE,
-  table.placement = "H"
-)
-```
-The average readiness deficit score is 0.73 on a 0–2 scale, indicating a moderate level of preparedness gap across the institution, with most staff positioned closer to medium readiness than to severe deficiency.
-
-The distribution shows that 31.2% of staff report high readiness, while the majority (64.5%) fall within medium readiness, suggesting functional but incomplete preparedness for emerging organisational demands. Only 4.2% fall in the low readiness category, indicating that severe readiness gaps are relatively limited but still present in isolated cases. Overall, the results point to a workforce that is largely moderately prepared, with a clear opportunity for targeted interventions to shift staff from medium to high readiness.
-
-
-\begin{table}
-\centering
-\begin{tabular}{cccc}
-\toprule
-Average Readiness Deficit Score & High Competency (\%) & Medium Competency (\%) & Low Competency (\%) \\
-\midrule
-0.73 & 31.20 & 64.50 & 4.20 \\
-\bottomrule
-\end{tabular}
-\caption{Overall Institutional Future Readiness Profile (Deficit-Based Scale: 0 = High Competency, 2 = Low Competency)}
-\end{table}
-
-
-
-```{r}
-
-# New corporate color palette for institutional reports
-color_low_readiness    <- "#D95F53"  # Muted slate-coral (Deficit/Low)
-color_medium_readiness <- "#E6AF47"  # Professional sand-gold (Medium)
-color_high_readiness   <- "#2C6B5E"  # Deep corporate teal-green (High)
-
-# 1. Clean data preparation pipeline (no manual cumsum needed)
-overall_readiness_plot <- readiness_long %>%
-  filter(!is.na(level), !is.na(readiness_score)) %>% 
-  
-  group_by(competency, level) %>%
-  summarise(n = n(), .groups = "drop") %>% 
-  
-  group_by(competency) %>%
-  mutate(proportion = n / sum(n)) %>% 
-  ungroup() %>% 
-  
-  # Establishes factor order for the legend and stacking
-  mutate(level = factor(level, levels = c("low", "medium", "high")))
-
-# 2. Plotting with synchronized stacking
-ggplot(overall_readiness_plot, aes(x = competency, y = proportion, fill = level)) +
-  
-  geom_col(width = 0.75, color = "white", linewidth = 0.4) +
-  
-  # CRITICAL FIX: position_stack handles the math, group matches the fill order
-  geom_text(
-    aes(
-      label = scales::percent(proportion, accuracy = 0.1),
-      color = ifelse(level == "medium", "black", "white"),
-      group = level
-    ),
-    position = position_stack(vjust = 0.5),
-    size = 3,
-    fontface = "bold"
-  ) +
-  
-  scale_y_continuous(labels = scales::percent_format(), expand = c(0, 0)) +
-  
-  scale_x_discrete(
-    labels = c(
-      "section_d.tech_skill" = "Tech",
-      "section_d.ict_skill" = "ICT",
-      "section_d.leadership_management" = "Leadership",
-      "section_d.policy_analysis_and_implementation" = "Policy",
-      "section_d.monitoring_evaluation" = "M & E"
-    )
-  ) +
-  
-  scale_fill_manual(
-    values = c(
-      "low" = color_low_readiness,
-      "medium" = color_medium_readiness,
-      "high" = color_high_readiness
-    )
-  ) +
-  
-  scale_color_identity() +
-  
-  labs(
-    title = "Overall Workforce Readiness Composition Profile",
-    subtitle = "Distribution of readiness levels across competency domains",
-    x = "Competency Core Area",
-    y = "Proportion",
-    fill = "Readiness Level"
-  ) +
-  
-  theme_minimal(base_size = 11) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
-    axis.text.y = element_text(face = "bold"),
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor = element_blank(),
-    legend.position = "bottom"
-  )
-
-
-```
-
-
-```{r}
-directorate_readiness <- readiness_scores %>%
-  group_by(section_a.directorate) %>%
-  summarise(
-    readiness = mean(readiness_index, na.rm = TRUE),
-    n = n()
-  ) %>%
-  arrange(desc(readiness))
-
-directorate_readiness
-```
-```{r}
-competency_long <- future_readiness %>%
-  select(
-    section_d.tech_skill,
-    section_d.ict_skill,
-    section_d.leadership_management,
-    section_d.policy_analysis_and_implementation,
-    section_d.monitoring_evaluation
-  ) %>%
-  pivot_longer(
-    everything(),
-    names_to = "competency",
-    values_to = "level"
-  )
-
-competency_long %>%
-  count(competency, level) %>%
-  group_by(competency) %>%
-  mutate(pct = n / sum(n)) %>%
-  ggplot(
-    aes(
-      competency,
-      pct,
-      fill = level
-    )
-  ) +
-  geom_col() +
-  coord_flip() +
-  scale_y_continuous(labels = scales::percent) +
-  labs(
-    title = "Workforce readiness profile",
-    x = "",
-    y = "Percentage"
-  )
-```
-```{r}
-library(tidytext)
-
-trend_long <- future_readiness %>%
-  select(section_i.emerging_trends) %>%
-  separate_rows(
-    section_i.emerging_trends,
-    sep = " "
-  ) %>%
-  filter(section_i.emerging_trends != "")
-
-trend_rank <- trend_long %>%
-  count(section_i.emerging_trends) %>%
-  arrange(desc(n))
-
-trend_rank
-```
-```{r}
-trend_rank %>%
-  ggplot(
-    aes(
-      reorder(section_i.emerging_trends, n),
-      n
-    )
-  ) +
-  geom_col() +
-  coord_flip() +
-  labs(
-    title = "Emerging organisational trends",
-    x = "",
-    y = "Frequency"
-  )
-```
-
-
-
-```{r}
-future_skills_long <- future_readiness %>%
-  select(starts_with("section_i.new_skill_you_need_")) %>%
-  pivot_longer(
-    everything(),
-    values_to = "skill"
-  ) %>%
-  filter(
-    !is.na(skill),
-    skill != ""
-  )
-
-skill_rank <- future_skills_long %>%
-  count(skill, sort = TRUE)
-
-skill_rank
-```
-
-
-```{r}
-skill_rank %>%
-  slice_max(n, n = 20) %>%
-  ggplot(
-    aes(
-      reorder(skill, n),
-      n
-    )
-  ) +
-  geom_point(size = 3) +
-  geom_segment(
-    aes(
-      x = skill,
-      xend = skill,
-      y = 0,
-      yend = n
-    )
-  ) +
-  coord_flip() +
-  labs(
-    title = "Most requested future skills",
-    x = "",
-    y = "Frequency"
-  )
-```
-
-
-```{r}
-improvement_long <- future_readiness %>%
-  select(section_d.improve_skill) %>%
-  separate_rows(
-    section_d.improve_skill,
-    sep = " "
-  )
-```
-
-```{r}
-improvement_rank <- improvement_long %>%
-  count(section_d.improve_skill) %>%
-  arrange(desc(n))
-
-improvement_rank
-```
-
-```{r}
-future_readiness %>%
-  count(section_f.level_training_needs) %>%
-  mutate(
-    pct = n / sum(n) * 100
-  )
-```
-```{r}
-barrier_long <- future_readiness %>%
-  select(section_h.barrier) %>%
-  separate_rows(
-    section_h.barrier,
-    sep = " "
-  )
-```
-
-```{r}
-barrier_rank <- barrier_long %>%
-  count(section_h.barrier) %>%
-  arrange(desc(n))
-
-barrier_rank
-```
-```{r}
-barrier_rank %>%
-  ggplot(
-    aes(
-      reorder(section_h.barrier, n),
-      n
-    )
-  ) +
-  geom_col() +
-  coord_flip() +
-  labs(
-    title = "Barriers to workforce adaptation",
-    x = "",
-    y = "Frequency"
-  )
-```
-
-```{r}
-n_staff <- nrow(data)
-
-future_demand <- data %>%
-  select(section_d.improve_skill) %>%
-  filter(!is.na(section_d.improve_skill)) %>%
-  mutate(skill = tolower(section_d.improve_skill)) %>%
-  mutate(skill = str_replace_all(skill, "[^a-z ]", " ")) %>%
-  mutate(skill = str_squish(skill)) %>%
-
-  mutate(skill_class = case_when(
-    str_detect(skill, "leadership|management") ~ "leadership",
-    str_detect(skill, "ict|digital|system") ~ "ict",
-    str_detect(skill, "policy") ~ "policy",
-    str_detect(skill, "data|analytics|analysis|m e|monitoring") ~ "m_and_e",
-    str_detect(skill, "tech|technical") ~ "tech",
-    TRUE ~ "other"
-  )) %>%
-  filter(skill_class != "other") %>%
-  count(skill_class) %>%
-  mutate(demand_rate = n / n_staff)
-
-current_readiness <- data %>%
-  select(
-    ict = section_d.ict_skill,
-    tech = section_d.tech_skill,
-    leadership = section_d.leadership_management,
-    policy = section_d.policy_analysis_and_implementation,
-    m_and_e = section_d.monitoring_evaluation
-  ) %>%
-  pivot_longer(everything(), names_to = "competency", values_to = "level") %>%
-  mutate(
-    level_num = case_when(
-      level == "low" ~ 1,
-      level == "medium" ~ 2,
-      level == "high" ~ 3
-    )
-  ) %>%
-  group_by(competency) %>%
-  summarise(
-    readiness_score = mean(level_num, na.rm = TRUE),
-    high_pct = mean(level == "high", na.rm = TRUE) * 100
-  )
-
-readiness_gap <- left_join(
-  current_readiness,
-  future_demand,
-  by = c("competency" = "skill_class")
-)
-
-ggplot(readiness_gap, aes(x = readiness_score, y = demand_rate)) +
-  geom_point(size = 4, color = "steelblue") +
-  geom_text(aes(label = competency), vjust = -1) +
-
-  scale_y_continuous(labels = percent_format()) +
-
-  labs(
-    title = "Future demand vs readiness (normalised model)",
-    x = "Current readiness score (1–3)",
-    y = "Demand rate (per staff)"
-  ) +
-
-  theme_minimal()
-```
-
-
-- Future workforce readiness
-- Digital transformation preparedness
-- Emerging competency requirements
-- Institutional adaptability
-
-Likely outputs
-
-- Emerging skills rankings
-- Workforce readiness summaries
-- Future skills dashboard
-- Trend analysis
-
-Likely recommendations
-
-- Future-focused training programmes
-- Digital skills initiatives
-- Leadership and innovation training
-- Strategic workforce development planning
-
-##  Key recommendations 
-
-Priority actions   
-
-
-## Conclusion   
-
-Strategic implications 
-
-
-## 7. Examplary visualisations
 
