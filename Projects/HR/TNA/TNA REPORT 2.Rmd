@@ -5,8 +5,8 @@ date: "`r format(Sys.Date(), '%Y-%m-%d')`"
 output: 
   pdf_document:
     latex_engine: pdflatex
-    toc: false
-    toc_depth: 2
+    toc: true
+    toc_depth: 3
 
 header-includes:
   - \usepackage[table]{xcolor}
@@ -55,7 +55,14 @@ library(MASS)         # polr for ordinal logistic
 library(ordinal)      # optionally for clm
 library(gtsummary)    # summary tables
 library(flextable)    # export tables
-library(DT)           # interactive tables
+library(DT) 
+library(kableExtra)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(tidyr)
+library(scales)# interactive tables
 library(networkD3)    # Sankey diagrams
 set.seed(123)         # reproducible seed
 
@@ -94,11 +101,154 @@ data <- data %>%
 
 ```
 
+\newpage
 ## Executive Summary
 
+```{r executive_summary_table, echo=FALSE, message=FALSE, warning=FALSE}
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+# 1. Plain text data frame - completely free of backslashes to guarantee no parsing errors
+summary_df <- data.frame(
+  Focus_Area = c(
+    "Workforce profile",
+    "Workforce experience",
+    "Training effectiveness",
+    "Competency profile",
+    "ICT capability gap",
+    "Long-tenure workforce",
+    "Directorate variation",
+    "Division variation",
+    "Training priority"
+  ),
+  
+  Strategic_Insight = c(
+    "87.5% of voluntary survey respondents cluster tightly within five core operational grades (NM7--NM12), heavily driven by NM8 as the single largest cadre at 28.7%. Structural promotion bottlenecks are a highly visible concern among active respondents.",
+    
+    "An extensive 36.2% of the active workforce reports a tenure of 16+ years. This reflects a profound self-selection survey bias where veteran staff felt a greater personal stake in completing the optional questionnaire than incoming cohorts.",
+    
+    "Initial induction courses yield peak value for new entries (4.80/5.00 effectiveness score). However, a critical systemic drop occurs in the 1--3 years bracket, where scores plummet to a mediocre 2.92, marking the only group where skill absorption is non-unanimous (92.3%).",
+    
+    "High baseline interpersonal competencies like Communication and Customer Service (both at 55.0% High) mask a critical organizational vulnerability: a massive 59.7% KIPRE-wide majority of competencies sit trapped on the Medium Proficiency warning track.",
+    
+    "Digital infrastructure skills represent the organization's primary bottleneck. Within the intermediate 1--3 years cohort, a strong 56.2% claim high technical capability, yet a meager 18.8% possess advanced ICT skills, confirming that intermediate training ignores modern workflows.",
+    
+    "A severe digital divide separates senior cadres from emerging staff. Veteran personnel with 16+ years of service exhibit an extreme technological deficit, with a mere 10.3% retaining high digital capabilities, driving deficiency severity to an institutional peak of 1.02 within grade NM11.",
+    
+    "Capability gaps are highly localized rather than uniform. The ASWED directorate operates as the primary departmental risk center, generating the worst cumulative deficiency profile in the organization, led by an acute severity index of 1.07 in ICT.",
+    
+    "Granular mapping isolates the WED division as a severe structural bottleneck, exhibiting highly deficient clusters across Information Systems (1.02), Leadership (0.89), and Policy (0.89), followed closely by intermediate leadership strains in EECEHD (0.94).",
+    
+    "Pivot away from generic corporate workshops. Capacity-building pipelines must be aggressively directed toward advanced digital systems literacy, M&E analytical frameworks, and regulatory Policy Implementation, specifically targeted at the NM8/NM11 cadres, ASWED directorate, and WED division."
+  )
+)
+
+# 2. Render the layout-locked, zebra-striped LaTeX table
+kbl(
+  summary_df,
+  format = "latex",
+  booktabs = TRUE,
+  longtable = FALSE,
+  col.names = c("Focus Area", "Key Insight & Strategic Action Mandate"),
+  caption = "Executive Summary Dashboard: Synthesis of Core Training Impact and Competency Skews",
+  label = "tab:executive_summary_dashboard",
+  escape = TRUE # Safe formatting evaluation enabled
+) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"), 
+    position = "center",
+    font_size = 9 
+  ) %>%
+  # Structural adjustments for layout spacing
+  column_spec(1, bold = TRUE, width = "3.2cm") %>%
+  column_spec(2, width = "11.3cm") %>%
+  
+  # ---- PROGRAMMATIC STYLING TO OVERRIDE THE STRINGS EXTENSION ----
+  # This achieves your bold emphasis styling cleanly through the backend engine:
+  row_spec(1, bold = FALSE) %>%
+  row_spec(2, bold = FALSE) %>%
+  row_spec(9, background = "gray!20", bold = TRUE) # Highlights your final mandate row
+```
 
 
 \newpage
+
+## List of Acronyms and Abbreviations
+
+```{r acronyms_table, echo=FALSE, message=FALSE, warning=FALSE}
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+# 1. Compile the plain text definitions manually
+acronyms_df <- data.frame(
+  Acronym = c(
+    # --- Directorates ---
+    "ASWED", "CBPGMD", "CSD", "CSLSD", "IARAD", "ODG", "RPDD",
+    # --- Divisions ---
+    "CCD", "DSAS", "EECEHD", "FAD", "HRAD", "IDOHD", "ICTD", "KSRID", 
+    "LSS", "NLABD", "NCDD", "PGMD", "PSD", "RHBD", "VCDSD", "WED"
+  ),
+  Classification = c(
+    rep("Directorate", 7),
+    rep("Division / Section", 16)
+  ),
+  Full_Definition = c(
+    # Directorates
+    "Animal Sciences Welfare and Ethics Directorate",
+    "Capacity Building Partnership and Grant Management Directorate",
+    "Corporate Services Directorate",
+    "Corporation Secretary Legal Services Directorate",
+    "Internal Audit and Risk Assurance Directorate",
+    "Office of the Director General",
+    "Research and Product Development Directorate",
+    # Divisions / Sections
+    "Corporate Communication Division",
+    "Data Science and Analytics Section",
+    "Evolutionary Ecology Conservation and Ecosystem Health Division",
+    "Finance and Accounts Division",
+    "Human Resource and Administration Division",
+    "Infectious Diseases and One Health Division",
+    "Information Communication Technology Division",
+    "Kenya Snakebite Research and Intervention Division",
+    "Laboratory Services Section",
+    "National Laboratory Animal Breeding Division",
+    "Non Communicable Diseases Division",
+    "Partnerships and Grants Management Division",
+    "Planning and Strategy Division",
+    "Reproductive Health and Biology Division",
+    "Veterinary Clinical and Diagnostics Services Division",
+    "Welfare and Ethics Division"
+  )
+)
+
+# 2. Sort alphabetically by Acronym for publication standards
+acronyms_df <- acronyms_df %>% arrange(Acronym)
+
+# 3. Render the zebra-striped LaTeX layout table
+kbl(
+  acronyms_df,
+  format = "latex",
+  booktabs = TRUE,
+  longtable = FALSE,
+  col.names = c("Acronym", "Classification", "Full Institutional Definition"),
+  caption = "Institutional Acronyms and Organizational Definitions Mapping",
+  label = "tab:institutional_acronyms",
+  escape = TRUE
+) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"),
+    position = "center",
+    font_size = 9
+  ) %>%
+  column_spec(1, bold = TRUE, width = "2.5cm") %>%
+  column_spec(2, italic = TRUE, width = "3.5cm") %>%
+  column_spec(3, width = "9.5cm")
+```
+
+\newpage
+
 ## Background
 
 The primary purpose of this Training Needs Analysis (TNA) is to systematically assess institutional competency gaps and evaluate workforce preparedness. This evidence-based approach is designed to inform training priorities and guide strategic human capital development across the KIPRE.
@@ -202,7 +352,7 @@ print(
   
   type = "latex",
   include.rownames = FALSE,
-  add.to.row = add_list,
+  add.to.row = add_list,table.placement = "!htbp",
   comment = FALSE,
   booktabs = TRUE,
   caption.placement = "top",
@@ -269,7 +419,7 @@ print(
   ),
   
   type = "latex",
-  include.rownames = FALSE,
+  include.rownames = FALSE,table.placement = "!htbp",
   booktabs = TRUE,
   caption.placement = "top",
   comment = FALSE
@@ -351,7 +501,7 @@ print(
   type = "latex",
   include.rownames = FALSE,
   booktabs = TRUE,
-  caption.placement = "top",
+  caption.placement = "top",table.placement = "!htbp",
   comment = FALSE
 )
 
@@ -468,7 +618,9 @@ data <- data %>%
 ```
 
 
-## Objective 1: Perceived skill gaps
+### Objective 1: Perceived skill gaps
+
+The baseline institutional data establishes that while the organization operates from a fundamentally stable footing, it faces a pervasive mid-level capability ceiling. Across all evaluated competencies, the workforce maintains a baseline Average Severity Score of 0.662  (see Table \ref{tab:overallseverity"}), with a healthy 37.0% of responses indicating High Proficiency (Safe Zone) and only a minimal 3.3% falling into the Low Proficiency (Critical Alert Zone). 
 
 ```{r}
 # Select, clean, and reshape data for the gap analysis
@@ -536,14 +688,19 @@ xtab <- xtable(
 print(
   xtab, 
   type = "latex", 
-  include.rownames = FALSE, # Cleans out the default row index number column (1)
-  booktabs = TRUE,          # Employs clean executive horizontal table lines
-  table.placement = "ht"     # Forces LaTeX to lock the table position exactly here
+  include.rownames = FALSE,table.placement = "!htbp", # Cleans out the default row index number column (1)
+  booktabs = TRUE     # Employs clean executive horizontal table lines
+     # Forces LaTeX to lock the table position exactly here
 )
 ```
 
+However, a deeper look into specific competency areas reveals that this stability is heavily anchored by general operations (see Figure \ref{fig:gap-profile}), such as Communication (55.0% High), Customer Service (55.0% High), and baseline Technical applications (48.8% High). Once these foundational administrative strengths are set aside, a critical structural vulnerability emerges: a massive 59.7% company-wide majority of competencies sit clustered within the Medium Proficiency (Warning Zone). This exposure is most acute within the organization's specialized technical and regulatory pillars—specifically ICT and Policy Implementation—where 72.5% and 71.2% of the workforce, respectively, reside on this warning track.
 
-```{r , fig.height=6, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+This profile diagnoses an organization whose staff possess excellent interpersonal and day-to-day administrative skills, but encounter a clear operational ceiling when tasked with handling advanced digital infrastructure or complex regulatory frameworks. Rather than pointing to a widespread institutional crisis, the data uncovers a highly focused training mandate. To breach this capability ceiling, strategic development resources must pivot away from generic corporate workshops. Instead, interventions should be aggressively channeled into formalizing advanced capacity-building pipelines for complex ICT systems management, Monitoring & Evaluation (M&E), and specialized Policy Implementation.
+
+
+```{r gap-profile, fig.pos='!htbp', fig.height=6, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.cap="Overall Competency Gap Composition Profile by Core Area."}
+
 # Color Definitions
 color_high   <- "#2E7D32" # Deep Green (Safe Zone)
 color_medium <- "#FBC02D" # Amber/Yellow (Warning)
@@ -634,9 +791,16 @@ ggplot(overall_gap_summary, aes(x = competency, y = proportion, fill = level)) +
   )
 
 ```
+#### Directorate level Competency Gap Profiling
 
+The shrinkage-adjusted matrix illustrated in Figure \ref{fig:heatmap_directorate} expands the institutional capability diagnostics by mapping self-reported proficiency profiles across the organization's distinct Directorates. This high-level view proves that operational vulnerabilities are highly localized, driven by specific functional mandates rather than a generalized systemic failure. Because these metrics depend on self-reporting, they express the relative comfort levels and perceived training needs of teams within their specific administrative workflows.
 
-```{r}
+The most prominent institutional hotspot is concentrated in the **ASWED** directorate. It presents the highest self-reported deficiency score across the entire organization, peaking at an acute **1.07 in ICT**—where a notable 19% of its respondents explicitly state a low proficiency severe gap. This directorate further reports heightened constraints in Finance (0.88), Leadership (0.88), and Policy applications (0.85). This profile strongly contrasts with more operationally secure directorates, such as **RPDD** and **CSD**, which maintain robust, low-severity baselines across core administrative indicators like Communication and Customer Service. 
+
+Concurrently, a uniform horizontal warning track spans nearly all departments in the areas of **Policy** and **M&E**, reinforcing earlier findings that regulatory compliance and analytical tracking are broad institutional anxieties. Ultimately, these self-reported baselines show that technical upskilling resources should not be distributed equally across the organization; instead, advanced ICT and financial management pipelines must be aggressively directed toward the **ASWED** directorate to resolve localized operational strain.
+
+```{r heatmap_directorate, fig.pos='!htbp', fig.height=5.2, fig.width=6.5, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.cap="Competency Gap Heatmap by Directorate Cadre."}
+
 # Configuration
 lambda <- 5 
 
@@ -644,8 +808,6 @@ lambda <- 5
 color_safe    <- "#2E7D32" # Deep Green (High Competency = 0 Severity)
 color_warning <- "#FBC02D" # Amber/Yellow (Medium Competency = 1 Severity)
 color_severe  <- "#C62828" # Deep Red (Low Competency = 2 Severity)
-
-
 
 global_mean <- mean(gap_long$gap_score, na.rm = TRUE)
 
@@ -675,7 +837,7 @@ ggplot(directorate_gap, aes(x = competency, y = directorate, fill = shrink_gap, 
   
   geom_text(
     aes(label = sprintf("%.2f", shrink_gap)),
-    size = 3.2,
+    size = 2.5, # Slightly scaled down to prevent text crowding in tighter spaces
     fontface = "bold",
     color = "black",
     vjust = -0.3
@@ -683,7 +845,7 @@ ggplot(directorate_gap, aes(x = competency, y = directorate, fill = shrink_gap, 
   
   geom_text(
     aes(label = paste0("H:", round(high_pct, 0), "% M:", round(med_pct, 0), "% L:", round(low_pct, 0), "%")),
-    size = 1.8,
+    size = 1.5, # Adjusted for cleaner cell bounds
     vjust = 1.6,
     color = "grey10"
   ) +
@@ -698,7 +860,20 @@ ggplot(directorate_gap, aes(x = competency, y = directorate, fill = shrink_gap, 
     midpoint = 1,
     name = "Severity Index",
     breaks = c(0, 1, 2),
-    labels = c("0 (High / Safe)", "1 (Medium)", "2 (Low / Severe)")
+    labels = c("0 (Safe)", "1 (Med)", "2 (Severe)")
+  ) +
+  
+  scale_x_discrete(
+    labels = c(
+      "m_and_e"    = "M & E",
+      "id"         = "ID",
+      "policy"     = "Policy",
+      "finance"    = "Finance",
+      "leadership" = "Leadership",
+      "tech"       = "Tech",
+      "comm"       = "Comm",
+      "customer"   = "Customer"
+    )
   ) +
   
   labs(
@@ -706,69 +881,78 @@ ggplot(directorate_gap, aes(x = competency, y = directorate, fill = shrink_gap, 
     subtitle = "Shrinkage adjusted metrics (Red indicates highest deficiency severity)",
     x = "Competency Area",
     y = "Directorate",
-    caption = "Values: High=0, Medium=1, Low=2. Smaller teams are safely shrunken toward global averages to eliminate sample bias."
+    caption = "Values: High=0, Medium=1, Low=2. Smaller teams are safely shrunken to eliminate sample bias."
   ) +
-  theme_minimal(base_size = 11) +
+  theme_minimal(base_size = 9.5) + # Tightly scaled core canvas text
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
     axis.text.y = element_text(face = "bold"),
     panel.grid = element_blank(),
-    legend.position = "bottom",
-    legend.key.width = unit(1.5, "cm"),
-    plot.title = element_text(face = "bold", size = 14),
-    plot.caption = element_text(size = 8, hjust = 0, color = "grey40")
+    
+    # ---- VERTICAL RECLAIM REPOSITION ----
+    legend.position = "right",
+    legend.title = element_text(size = 8, face = "bold"),
+    legend.text = element_text(size = 7.5),
+    
+    plot.title = element_text(face = "bold", size = 12),
+    plot.subtitle = element_text(size = 8.5),
+    plot.caption = element_text(size = 6.5, hjust = 0, color = "grey40")
   )
 ```
 
-```{r}
+
+
+#### Divisional level Competency Gap Profiling
+
+The shrinkage-adjusted division matrix illustrated in Figure \ref{fig:heatmap_division} provides the most granular view of the organization's capability profiles. By evaluating these localized self-reported scores, the data pinpoints exactly where operational vulnerabilities reside within the corporate matrix, reflecting the distinct day-to-day anxieties and perceived capacity constraints of individual working teams.
+
+The most critical operational exposure is highly concentrated within the **WED** division. This unit displays a severe cluster of high-deficiency self-assessments, peaking at an acute **1.02 in ID** (where 18% of respondents report an absolute low proficiency severe gap), **0.89 in Leadership**, and **0.89 in Policy**. Minor, yet notable secondary warning nodes are visible within **EECEHD** (peaking at **0.94 in Leadership**) and **KSRID** (elevated at **0.89 in Policy**). Conversely, operational core units like **FAD**, **NCDD**, and **ICTD** present robust, deep green baselines, expressing high levels of comfort across nearly all administrative indicators. 
+
+Ultimately, these granular subjective findings prove that institutional deficiencies are not systemic across all working teams. Instead, they uncover a highly surgical upskilling roadmap, dictating that intermediate leadership development and policy infrastructure pipelines must be aggressively funneled into the **WED** and **EECEHD** divisions to eliminate localized capability gaps.
+
+
+```{r heatmap_division, fig.height=5.2, fig.width=6.5, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.pos='!htbp', fig.cap="Competency Gap Heatmap by Division."}
+
 # 1. Configuration & Colors
 lambda <- 5 
-color_safe    <- "#2E7D32" # Deep Green
-color_warning <- "#FBC02D" # Amber/Yellow
-color_severe  <- "#C62828" # Deep Red
+color_safe    <- "#2E7D32" 
+color_warning <- "#FBC02D" 
+color_severe  <- "#C62828" 
 
 global_mean <- mean(gap_long$gap_score, na.rm = TRUE)
 
 # 2. Advanced Data Processing & Label Consolidation
 division_gap <- gap_long %>%
   filter(!is.na(division), !is.na(competency), !is.na(level)) %>% 
-  
   group_by(division, competency) %>%
   summarise(
     n = n(),
     mean_gap = mean(gap_score, na.rm = TRUE),
     shrink_gap = (n / (n + lambda)) * mean_gap +
                   (lambda / (n + lambda)) * global_mean,
-    
     low_pct  = mean(level == "low", na.rm = TRUE) * 100,
     med_pct  = mean(level == "medium", na.rm = TRUE) * 100,
     high_pct = mean(level == "high", na.rm = TRUE) * 100,
     .groups = "drop"
   ) %>%
   mutate(
-    # Reorder Y-axis by overall deficiency weight
     division = forcats::fct_reorder(division, shrink_gap, .fun = mean, na.rm = TRUE),
-    
-    # FIXED: Combine both metrics into a SINGLE text label block with a clean line break (\n)
-    # Format line 1: "0.77" 
-    # Format line 2: "H:15 M:70 L:15"
     combined_label = paste0(
       sprintf("%.2f", shrink_gap), "\n",
       "H:", round(high_pct, 0), " M:", round(med_pct, 0), " L:", round(low_pct, 0)
     )
   )
 
-# 3. Clean Single-Layer Plotting
+# 3. Compact Plotting Pipeline
 ggplot(division_gap, aes(x = competency, y = division, fill = shrink_gap, alpha = n)) +
-  geom_tile(color = "white", lwd = 0.5) +
+  geom_tile(color = "white", lwd = 0.4) +
   
-  # FIXED: Only use ONE text geom now so overlapping is physically impossible
   geom_text(
     aes(label = combined_label),
-    size = 1.8,          # Scaled for crystal-clear readability within the cells
-    lineheight = 0.85,   # Slightly tightens the spacing between line 1 and line 2
+    size = 1.5,          # Slightly smaller text size fits better inside compressed rows
+    lineheight = 0.80,   
     fontface = "bold",
-    color = "grey15"     # High-contrast readable dark gray text
+    color = "grey15"     
   ) +
   
   scale_alpha(range = c(0.5, 1), guide = "none") +
@@ -778,9 +962,9 @@ ggplot(division_gap, aes(x = competency, y = division, fill = shrink_gap, alpha 
     mid = color_warning,
     high = color_severe,
     midpoint = 1,
-    name = "Severity Index",
+    name = "Severity",
     breaks = c(0, 1, 2),
-    labels = c("0 (High / Safe)", "1 (Medium)", "2 (Low / Severe)")
+    labels = c("0 (Safe)", "1 (Med)", "2 (Severe)")
   ) +
   
   scale_x_discrete(
@@ -801,37 +985,148 @@ ggplot(division_gap, aes(x = competency, y = division, fill = shrink_gap, alpha 
     subtitle = "Shrinkage adjusted metrics (Warm tones indicate higher training needs)",
     x = "Competency Core Area",
     y = "Division",
-    caption = "Labels show: Adjusted Score (Top) / Employee Skill Breakdowns (Bottom)."
+    caption = "Labels show: Adjusted Score / Employee Breakdowns."
   ) +
   
-  theme_minimal(base_size = 10) +
+  theme_minimal(base_size = 8.5) + # Drops default structural font scale slightly
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
-    axis.text.y = element_text(face = "bold"),
+    axis.text.y = element_text(face = "bold", size = 7.5), # Smaller text makes 16 rows fit easily
     panel.grid = element_blank(),
-    legend.position = "bottom",
-    legend.key.width = unit(1.2, "cm"),
-    plot.title = element_text(face = "bold", size = 12),
-    plot.caption = element_text(size = 7, hjust = 0, color = "grey40")
+    
+    # ---- VERTICAL RECLAIM FIXES ----
+    legend.position = "right",        # Moving to side stops plot from pushing down the page
+    legend.title = element_text(size = 7.5, face = "bold"),
+    legend.text = element_text(size = 7),
+    legend.key.height = unit(0.8, "cm"), 
+    
+    plot.title = element_text(face = "bold", size = 11),
+    plot.subtitle = element_text(size = 8),
+    plot.caption = element_text(size = 6, hjust = 0, color = "grey40"),
+    plot.margin = margin(2, 2, 2, 2, "mm") # Clamps blank border white-space around chart edges
   )
 
 ```
 
 
-```{r}
-job_grade_gap <- gap_long %>%
-  
-  group_by(job_grade, competency) %>%
-  
-  summarise(
-    mean_gap = mean(gap_score, na.rm = TRUE),
-    low_pct  = mean(level == "low") * 100,
-    .groups = "drop"
+
+
+
+#### Cadre-Level Competency Gap Profiling
+The shrinkage-adjusted matrix illustrated in Figure \ref{fig:heatmap_job_grade} clarifies that the organization's mid-level capability ceiling is driven by critical, localized vulnerabilities rather than a uniform institutional deficit. Because these metrics are entirely self-reported, they reflect the employees' personal comfort levels and perceived operational limitations within their specific roles. 
+
+The most severe self-reported operational risk is heavily concentrated within the senior operational margin of grade **NM11**, which displays the highest deficiency severity scores in the organization—peaking at a critical **1.02 in ICT** (where 20% of respondents judge themselves as having a severe gap), **0.95 in Policy**, and **0.89 in Monitoring & Evaluation (M&E)**. This directly highlights an acute sense of technological and regulatory isolation among the long-tenured veteran staff who dominate this cadre.
+
+Concurrently, a highly visible warning track runs through the organization’s primary operational layers, specifically within **NM8** and **NM12**. While **NM8** staff report high confidence in interpersonal competencies like Communication and Customer Service, they acknowledge a clear capability ceiling when handling specialized inputs, reporting elevated deficiency indices in **Policy (0.73)** and **ICT (0.62)**. Because NM8 represents the single largest segment of the voluntary sample (28.7%), this widespread self-reported vulnerability confirms that digital and regulatory gaps directly impact core service delivery. 
+
+Ultimately, these subjective baselines indicate that capacity-building resources must pivot away from generalized workshops and instead focus on technical upskilling in digital systems literacy and policy applications targeting the **NM8, NM10, and NM11** cadres.
+
+
+
+
+
+### Objevtive 2: Perceived impact of past training
+
+Table \ref{tab:unified_training_skills} presents an integrated profile of capacity-building impact and current proficiency levels across employee tenure brackets. Out of 80 voluntary respondents, 56 (70.0%) have attended past training, creating a solid baseline for analysis. The data reveals a sharp, non-linear drop in performance for early-career staff. New hires with less than a year of service report excellent results, with an effectiveness score of 4.80 out of 5.00 and a 100% skill acquisition rate. However, for the 1–3 Years cohort, average training effectiveness plummets to 2.92, making it the only group where skill acquisition is not unanimous (92.3%).The table reveals the root cause of this drop: while 56.2% of the 1–3 years cohort report high technical skills, a meager 18.8% possess high ICT skills. This major difference proves that intermediate training focuses too much on routine manual tasks and neglects modern digital workflows. A different structural issue affects long-serving staff (16+ Years). This group actively participates in training (\(n=18\)) and rates it highly (3.94), yet only 10.3% have high ICT capabilities. This shows that while mid-career training successfully builds capabilities up to the seven-year mark (\(\text{peaking at } 73.3\% \text{ technical and } 40.0\% \text{ ICT proficiencies}\)), the organization lacks the continuous digital upskilling needed to prevent early-career bottlenecks and long-tenure technological isolation.
+
+```{r cdeepdiveht, results='asis', echo=FALSE, warning=FALSE,message=FALSE}
+# 1. Define explicit row ordering for service levels
+service_levels <- c(
+  "Less Than 1 Year",
+  "1 3 Years",
+  "4 7 Years",
+  "8 15 Years",
+  "16+ Years"
+)
+
+# 2. Build the unified data frame using explicit string conversion
+unified_summary <- data %>%
+  mutate(
+    Length_Service = as.character(section_a.length_service) %>%
+      str_replace_all("_", " ") %>%
+      str_to_title(),
+    
+    # Safe logical flags using explicit character conversions
+    attended_bool  = (str_to_lower(as.character(section_e.attended_training)) == "yes" | section_e.attended_training == 1),
+    acquired_bool  = (str_to_lower(as.character(section_e.acquired_skill)) == "yes" | section_e.acquired_skill == 1),
+    high_tech_bool = (str_to_lower(as.character(section_d.tech_skill)) == "high"),
+    high_ict_bool  = (str_to_lower(as.character(section_d.ict_skill)) == "high")
   ) %>%
   
-  arrange(desc(mean_gap))
+  # Group by length of service to compile metrics
+  group_by(Length_Service) %>%
+  summarise(
+    Total_Sample = n(),
+    Total_Attended = sum(attended_bool, na.rm = TRUE),
+    Avg_Effectiveness = mean(as.numeric(section_e.effective_training)[attended_bool], na.rm = TRUE),
+    Skills_Acquired_Pct = mean(acquired_bool[attended_bool], na.rm = TRUE) * 100,
+    High_Tech_Pct = mean(high_tech_bool, na.rm = TRUE) * 100,
+    High_ICT_Pct = mean(high_ict_bool, na.rm = TRUE) * 100
+  ) %>%
+  
+  # Enforce row ordering based on defined service levels
+  arrange(match(Length_Service, service_levels)) %>%
+  
+  # Format numeric fields and append percentages clearly for LaTeX
+  mutate(
+    Avg_Effectiveness = sprintf("%.2f", Avg_Effectiveness),
+    Skills_Acquired_Pct = sprintf("%.1f%%", Skills_Acquired_Pct),
+    High_Tech_Skills = sprintf("%.1f%%", High_Tech_Pct),
+    High_ICT_Skills = sprintf("%.1f%%", High_ICT_Pct)
+  ) %>%
+  
+  # Isolate columns and rename headers to be significantly shorter
+  select(
+    `Service Tenure` = Length_Service, 
+    `Sample (N)` = Total_Sample, 
+    `Attended (n)` = Total_Attended, 
+    `Avg Eff. (1-5)` = Avg_Effectiveness, 
+    `Skill Acq. (%)` = Skills_Acquired_Pct, 
+    `High Tech (%)` = High_Tech_Skills, 
+    `High ICT (%)` = High_ICT_Skills
+  )
+
+# 3. Convert to text matrix to completely lock structure formatting for xtable
+unified_matrix <- as.matrix(unified_summary)
+
+# 4. Generate the compact LaTeX code block
+print(
+  xtable(
+    unified_matrix, table.placement = "!htbp",
+    caption = "Breakdown of Training Impact and High Skill Proficiency by Tenure", 
+    label = "tab:unified_training_skills",
+    align = c("l", "l", "c", "c", "c", "c", "c", "c")
+  ),
+  type = "latex", 
+  include.rownames = FALSE, 
+  booktabs = TRUE, 
+  caption.placement = "top", 
+  comment = FALSE,
+  # This scaling command ensures it physically sits cleanly on your standard PDF margins
+  size = "\\small" 
+)
+
+```
 
 
+
+
+### Objective 3: Perceived Training priorities
+
+### Objective 4: Training delivery preferences
+
+
+### Objective 5: Perceived workplace bottlenecks 
+
+### Objective 6 : Innovation and innovation readiness
+
+
+## Conclusion and Recommendations
+
+
+## Key  plots
+
+```{r heatmap_job_grade, fig.pos='!htbp', fig.height=5.2, fig.width=6.5, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', fig.cap="Competency Gap Heatmap by Job Grade Cadre."}
 
 # 1. Configuration & Shared Color Definitions
 lambda <- 5 
@@ -844,7 +1139,6 @@ global_mean <- mean(gap_long$gap_score, na.rm = TRUE)
 
 # 2. Synchronized Data Processing (Aggregated by Job Grade)
 job_grade_gap <- gap_long %>%
-  # Filter out missing records to keep the factors tightly aligned
   filter(!is.na(job_grade), !is.na(competency), !is.na(level)) %>% 
   
   group_by(job_grade, competency) %>%
@@ -875,19 +1169,16 @@ job_grade_gap <- gap_long %>%
 
 # 3. Finalized Plotting Pipeline
 ggplot(job_grade_gap, aes(x = competency, y = job_grade, fill = shrink_gap, alpha = n)) +
-  # Draw crisp cell partitions
   geom_tile(color = "white", lwd = 0.5) +
   
-  # Combined single text layer prevents vertical overlapping bugs
   geom_text(
     aes(label = combined_label),
-    size = 2.2,         
-    lineheight = 0.85,  
+    size = 1.6,         # Scaled down to fit elegantly inside compact rows
+    lineheight = 0.80,  
     fontface = "bold",
     color = "grey10"
   ) +
   
-  # Tile visibility mapping based on sample density (no legend)
   scale_alpha(range = c(0.5, 1), guide = "none") +
   
   # CONTINUOUS SEVERITY GRADIENT: Green (0) -> Yellow (1) -> Red (2)
@@ -896,12 +1187,11 @@ ggplot(job_grade_gap, aes(x = competency, y = job_grade, fill = shrink_gap, alph
     mid = color_warning,
     high = color_severe,
     midpoint = 1,
-    name = "Severity Index",
+    name = "Severity",
     breaks = c(0, 1, 2),
-    labels = c("0 (High / Safe)", "1 (Medium)", "2 (Low / Severe)")
+    labels = c("0 (Safe)", "1 (Med)", "2 (Severe)")
   ) +
   
-  # Presentation-ready name lookups for technical snake_case tokens
   scale_x_discrete(
     labels = c(
       "m_and_e"    = "M & E",
@@ -923,33 +1213,20 @@ ggplot(job_grade_gap, aes(x = competency, y = job_grade, fill = shrink_gap, alph
     caption = "Values: High=0, Medium=1, Low=2. Labels display: Shrunk Score / raw H-M-L percentages."
   ) +
   
-  theme_minimal(base_size = 11) +
+  theme_minimal(base_size = 9) + # Scaled baseline canvas text
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
     axis.text.y = element_text(face = "bold"),
     panel.grid = element_blank(),
-    legend.position = "bottom",
-    legend.key.width = unit(1.5, "cm"),
-    plot.title = element_text(face = "bold", size = 14),
-    plot.caption = element_text(size = 8, hjust = 0, color = "grey40")
+    
+    # ---- VERTICAL RECLAIM REPOSITION ----
+    legend.position = "right",
+    legend.title = element_text(size = 8, face = "bold"),
+    legend.text = element_text(size = 7.5),
+    
+    plot.title = element_text(face = "bold", size = 11),
+    plot.subtitle = element_text(size = 8.5),
+    plot.caption = element_text(size = 6.5, hjust = 0, color = "grey40")
   )
-
 ```
-
-
-### Objevtive 2: Perceived impact of past training
-
-
-### Objective 3: Perceived Training priorities
-
-### Objective 4: Training delivery preferences
-
-
-### Objective 5: Perceived workplace bottlenecks 
-
-### Objective 6 : Innovation and innovation readiness
-
-
-## Conclusion and Recommendations
-
 
