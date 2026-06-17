@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_MODULUS=deXvrziMOdAeeVpp6xaCy4NGiyuBskRV/h+dz8coZI3AFNUHb3Ed7m9vRkQx2sJMI0wLaAyybOzQDnV5xM8Y1R20Qj+5qql7QT/TUYYMLMSFJzxxivb6qlsH2kM5lxqwfZ0oLAfgFrvCRi7iakNGUHsT75eWt7/o3bFA/KoT8Gg=-->
+<!--_SIG=Y1JAIyFfeilmBd0rFGufkn6rmxth4Lncbwh2algq52tadhcu/MKK5uZFwYjvpdvvWrkmXxJ4m2kGkN9nj/Ewad+b5OuR0vIW94bw7EDULpwBwAvpwfn4PplcySpasJlksyf3KXoT+XyQJgNo7hKQ9Bn30UGOSwTAzopXRre0LyA=-->
+<Setup Id="Office64.en-us" Type="AddOn" Keyword="Office64MUI" Culture="en-us">
+	<Option Id="AlwaysInstalled" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="Gimme_OnDemandData" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="ProductFiles" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="no">
+		<Option Id="GrooveFiles64Intl" DefaultState="FollowParent" DisallowAbsent="no" DisallowAdvertise="yes" Hidden="yes">
+			<OptionDependency Lead="GrooveFiles2"/>
+		</Option>
+		<Option Id="OneNoteToLinkedNotesIntl" DefaultState="Absent" DisallowAbsent="no" DisallowAdvertise="yes" Hidden="yes">
+			<OptionDependency Lead="OneNoteFiles"/>
+		</Option>
+		<Option Id="Outlook64SearchShellRegIntl" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="yes" Hidden="yes">
+			<OptionDependency Lead="OUTLOOKFiles"/>
+		</Option>
+		<Option Id="TOOLSFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no">
+			<Option Id="OsmSKUMain" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="yes" PreReq="IsProPlus;IsStandard;IsMondo;IsAccess;IsExcel;IsInfoPath;IsOneNote;IsOutlook;IsPowerPoint;IsPrjPro;IsPrjStd;IsPublisher;IsVisPro;IsVisStd;IsWord;IsProPlusR;IsStandardR;IsAccessR;IsExcelR;IsInfoPathR;IsOneNoteR;IsOutlookR;IsPowerPointR;IsPrjProR;IsPrjStdR;IsPublisherR;IsVisProR;IsVisStdR;IsWordR;IsC2RPackageOnMachineOSM"/>
+		</Option>
+		<Option Id="LyncFiles64Intl" DefaultState="FollowParent" DisallowAbsent="no" DisallowAdvertise="yes" Hidden="yes"/>
+	</Option>
+	<PackageRef Path="Office64MUISet.xml"/>
+	<PackageRef Path="Office64MUI.xml"/>
+	<LocalCache DownloadCode="{90150000-0116-0409-1000-0000000FF1CE}" SkuComponentDirectory="Office64.en-us">
+		<File Id="Office64MUISet.xml" MD5="B4C45FDA00BDC14F66AB43B2ECB3E383" Size="0" RelativeCachePath="Office64MUISet.xml" RelativeSourcePath="Office64MUISet.xml"/>
+		<File Id="Office64MUISet.msi" MD5="EA8F105F1DCB2258252D3E2D18EC2637" Size="626688" RelativeCachePath="Office64MUISet.msi" RelativeSourcePath="Office64MUISet.msi"/>
+		<File Id="Office64MUI.xml" MD5="E1D503BA7B052DC8F57F32B33C170F69" Size="0" RelativeCachePath="Office64MUI.xml" RelativeSourcePath="Office64MUI.xml"/>
+		<File Id="Office64MUI.msi" MD5="D5CA7D65238D1C397BDD13BE2B5A9E23" Size="798720" RelativeCachePath="Office64MUI.msi" RelativeSourcePath="Office64MUI.msi"/>
+		<File Id="OWOW64LR.cab" MD5="AEB6FCE3776806EB844765AA0BBA4EB0" Size="1888120" RelativeCachePath="OWOW64LR.cab" RelativeSourcePath="OWOW64LR.cab"/>
+		<File Id="Setup.xml" MD5="" Size="" RelativeCachePath="Setup.xml" RelativeSourcePath="Setup.xml"/>
+	</LocalCache>
+</Setup>

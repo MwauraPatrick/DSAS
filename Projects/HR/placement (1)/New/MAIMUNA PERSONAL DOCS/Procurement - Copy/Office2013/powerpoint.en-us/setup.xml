@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_MODULUS=38AESqUHH4GDHsbKzTl4f4YSAzLWQeHOtBSkgdlRP0qWDWhAcaVN6/aXwgg2mu06PwgQuHWiueU5MjP9Iy7PGXHH2SqG+xQemFTBszGKci3GFKmzUM26LuOvgzVuB7kft3c6vpxiU+iNAtrPKG/CBfeuT2wTR7N+lDNvyR9mEGY=-->
+<!--_SIG=yvRFeP+jNDUvQKONHDUsY7np6AA9i5TYDSqZLoJbIWKvPnHuiR3Z7vVZEKKxGe6MvnDOqwdB6ms+XyIQAm/YUzMNF2owYdgWvzLjgce0RdmJ1rzH90o8BP0IHp3iSg5sQs4moRqbKXVUz6dEsxTD5DDReCUv7TtKxLsWsRSa600=-->
+<Setup Id="PowerPoint.en-us" Type="AddOn" Keyword="PowerPointMUI" Culture="en-us">
+	<Option Id="AlwaysInstalled" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="Gimme_OnDemandData" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="ProductFiles" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="no">
+		<Option Id="PPTFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no">
+			<Option Id="OrgChartFiles" DefaultState="Absent" DisallowAbsent="no" DisallowAdvertise="yes"/>
+			<Option Id="PPTPresentationTemplates" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="yes" Hidden="yes">
+				<OptionDependency Lead="PPTFiles"/>
+			</Option>
+			<Option Id="PPTHelpFiles" DefaultState="FollowParent" DisallowAbsent="yes" DisallowAdvertise="no" Hidden="yes"/>
+		</Option>
+	</Option>
+	<PackageRef Path="PowerPointMUI.xml"/>
+	<LocalCache DownloadCode="{90150000-0018-0409-0000-0000000FF1CE}" SkuComponentDirectory="PowerPoint.en-us">
+		<File Id="PowerPointMUI.xml" MD5="0F99BB11547286D02E3797F81CB795D3" Size="0" RelativeCachePath="PowerPointMUI.xml" RelativeSourcePath="PowerPointMUI.xml"/>
+		<File Id="PowerPointMUI.msi" MD5="4833A6A6D6E47C6F5251F813009A9AC7" Size="1851392" RelativeCachePath="PowerPointMUI.msi" RelativeSourcePath="PowerPointMUI.msi"/>
+		<File Id="PptLR.cab" MD5="A630B0ADA99CADF1D6B68F13BAF9CBDB" Size="26967993" RelativeCachePath="PptLR.cab" RelativeSourcePath="PptLR.cab"/>
+		<File Id="Setup.xml" MD5="" Size="" RelativeCachePath="Setup.xml" RelativeSourcePath="Setup.xml"/>
+	</LocalCache>
+</Setup>

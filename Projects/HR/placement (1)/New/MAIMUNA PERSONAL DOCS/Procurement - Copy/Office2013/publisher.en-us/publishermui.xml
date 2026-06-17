@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_MODULUS=pl7uYKXukqUYNSAfTw6uAWCxQmA1I2GFbCbk4Oi3QJNviE11dajUSF8GIOE2MzXoV0fXABOjTkXvraiGMted1QUTcxMyobiOIOK1slThdZG3UANb3fEU2anDEVtmFduiANieuyoKGnK2uabN48Da7wdlUzcXmF3/01dl5TQ0rSA=-->
+<!--_SIG=0UuX7KYN/40wd68t/ygZr4aHaiInaSwpu0bwSFcPTNcXIi8Mz1OWJH901iHx+chec1tDvIcq4pv7RzklbOheNNkD7flmfshuvtKJTXBqGoH67+aOUtE6osVVoj/qMOpQoAyDdyf1UmzykOCbut8yj9oftai8gBmHbp5st4SQmYg=-->
+<Package Id="PublisherMUI.en-us" Type="MSI" Path="PublisherMUI.MSI" Version="1.0" ProductCode="{90150000-0019-0409-0000-0000000FF1CE}" MSIVersion="15.0.4420.1017" ProductLanguage="1033" Platform="x86">
+	<Feature Id="PublisherHelpFilesIntl_1033" Cost="391983">
+		<OptionRef Id="PublisherHelpFiles"/>
+	</Feature>
+	<Feature Id="PubPrimaryIntl_1033" Cost="4978104">
+		<OptionRef Id="PubPrimary"/>
+	</Feature>
+	<Feature Id="Gimme_OnDemandData" Cost="0">
+		<OptionRef Id="Gimme_OnDemandData"/>
+	</Feature>
+	<Feature Id="PubCoreWizardFilesIntl_1033" Cost="843536">
+		<OptionRef Id="PubPrimary"/>
+	</Feature>
+	<Feature Id="PubPaperDirectA4Intl_1033" Cost="1257590">
+		<OptionRef Id="PubPrimary"/>
+	</Feature>
+	<Feature Id="SetupXmlFiles" Cost="468">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="PubPaperDirectLetterIntl_1033" Cost="1264160">
+		<OptionRef Id="PubPrimary"/>
+	</Feature>
+	<Feature Id="PublisherFontSchemesIntl_1033" Cost="6953277">
+		<OptionRef Id="PubPrimary"/>
+	</Feature>
+	<Feature Id="SetupControllerFiles" Cost="468">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="MsoInstalledPackagesScopedIntl_1033" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+</Package>

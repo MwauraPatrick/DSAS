@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_MODULUS=1gfI3vFxBKtph0BxORks4BGcZoM7o91XCCrPcQ9FRgFRKuSkobl09GbuokRUk0vibUrhZMRj2RkhGChks0g7WJ8vCetKPYe1wjAP9jARAgZEiY0kqGkC2hvdIy/urhYQg7D9uwrhzVBl9QzX0MkBoMKVI1TEi8eNztt0Qw5Mclw=-->
+<!--_SIG=pyox6wSXItjcSf66/cWwHxFT0pQuo3V6PT2LwaBeKu9tDuOFb4gq5DXEMFhzxW3vRMRNox5MOy+eKHg1eubBTIsJxWysJrYAQNyN6lIReJpLPkGrREbdS/a/JiH+1DTqdPt1OgQ3p/sXgm4MB7pJP9OdMheGvmWOg1T7EU7KhVU=-->
+<Setup Id="Outlook.en-us" Type="AddOn" Keyword="OutlookMUI" Culture="en-us">
+	<Option Id="AlwaysInstalled" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="Gimme_OnDemandData" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="ProductFiles" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="no">
+		<Option Id="OUTLOOKFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no">
+			<Option Id="OutlookHelpFiles" DefaultState="FollowParent" DisallowAbsent="yes" DisallowAdvertise="no" Hidden="yes"/>
+			<Option Id="OutlookImportExportFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no">
+				<Option Id="OutlookDVExtensionsFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no">
+					<Option Id="OutlookDVCsvWinFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no"/>
+				</Option>
+			</Option>
+			<Option Id="OutlookStationeryFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no">
+				<Option Id="OutlookStationeryBasicFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no"/>
+				<Option Id="OutlookStationeryExtended" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no"/>
+			</Option>
+			<Option Id="OutlookTemplateFiles" DefaultState="Absent" DisallowAbsent="no" DisallowAdvertise="yes"/>
+			<Option Id="OutlookMessaging" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="no">
+				<OptionDependency Lead="OUTLOOKFiles"/>
+				<Option Id="OutlookMAPI2" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="no">
+					<OptionDependency Lead="OUTLOOKFiles"/>
+				</Option>
+			</Option>
+			<Option Id="OutlookAddIns" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="yes">
+				<Option Id="OutlookSocialConnector" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="yes"/>
+			</Option>
+			<Option Id="OutlookOms" DefaultState="FollowParent" DisallowAbsent="yes" DisallowAdvertise="no" Hidden="yes"/>
+		</Option>
+		<Option Id="OutlookSearchShellRegIntl" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="yes" Hidden="yes">
+			<OptionDependency Lead="OUTLOOKFiles"/>
+		</Option>
+		<Option Id="WORDSharedFiles" DefaultState="Absent" DisallowAbsent="no" DisallowAdvertise="no" Hidden="yes">
+			<OptionDependency Lead="OUTLOOKFiles"/>
+			<OptionDependency Lead="WORDFiles"/>
+		</Option>
+		<Option Id="WhiteRabbitHidden" DefaultState="Absent" DisallowAbsent="no" DisallowAdvertise="yes" Hidden="yes">
+			<OptionDependency Lead="WORDFiles"/>
+			<OptionDependency Lead="EXCELFiles"/>
+			<OptionDependency Lead="OUTLOOKFiles"/>
+		</Option>
+	</Option>
+	<PackageRef Path="OutlookMUI.xml"/>
+	<LocalCache DownloadCode="{90150000-001A-0409-0000-0000000FF1CE}" SkuComponentDirectory="Outlook.en-us">
+		<File Id="OutlookMUI.xml" MD5="3007FB0D545B91774A6B8113C8246277" Size="0" RelativeCachePath="OutlookMUI.xml" RelativeSourcePath="OutlookMUI.xml"/>
+		<File Id="OutlookMUI.msi" MD5="FFA0C567A96DA6D3D657A49FA023732A" Size="2101248" RelativeCachePath="OutlookMUI.msi" RelativeSourcePath="OutlookMUI.msi"/>
+		<File Id="OutlkLR.cab" MD5="C346DC7F41116594631F994A4BAF1B40" Size="3242747" RelativeCachePath="OutlkLR.cab" RelativeSourcePath="OutlkLR.cab"/>
+		<File Id="Setup.xml" MD5="" Size="" RelativeCachePath="Setup.xml" RelativeSourcePath="Setup.xml"/>
+	</LocalCache>
+</Setup>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_MODULUS=VQvT5i6WJlvZGG92i+GUlU97s2K0sgyUd056Oj5VYszYz2tmmnx7BY3lRE+9UY5R3HS+eqj2w7qyNNej5t561eXmH8sCsYU1VGRGtsvLLeQKOivztjcIkD89JBDl0e2UExMt25Uw93+TH+bMVjaWvRnziHIcB2wM6yxATAglfSg=-->
+<!--_SIG=U97MgRxlqEXUn8YIHwMyr35BqOeKMMpawvJPtLeGqNNmNEec5zzlSor/0hMjV43NiujhTN0ohrQVKKQaROFKjN90J+jehWHaWYjPY6rV9Hi1QKMt/rgaxzXrTtZtEChhDnZVk7X94VbVzr7ECQGPBa2ug6C6GrAjx78NKmL96Qw=-->
+<Setup Id="OSM.en-us" Type="AddOn" Keyword="OSMMUI" Culture="en-us">
+	<Option Id="AlwaysInstalled" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="Gimme_OnDemandData" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="ProductFiles" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="no">
+		<Option Id="TOOLSFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no">
+			<Option Id="OsmSKUMain" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="yes" PreReq="IsProPlus;IsStandard;IsMondo;IsAccess;IsExcel;IsInfoPath;IsOneNote;IsOutlook;IsPowerPoint;IsPrjPro;IsPrjStd;IsPublisher;IsVisPro;IsVisStd;IsWord;IsProPlusR;IsStandardR;IsAccessR;IsExcelR;IsInfoPathR;IsOneNoteR;IsOutlookR;IsPowerPointR;IsPrjProR;IsPrjStdR;IsPublisherR;IsVisProR;IsVisStdR;IsWordR;IsC2RPackageOnMachineOSM"/>
+		</Option>
+	</Option>
+	<PackageRef Path="OSMMUI.xml"/>
+	<LocalCache DownloadCode="{90150000-00E1-0409-0000-0000000FF1CE}" SkuComponentDirectory="OSM.en-us">
+		<File Id="OSMMUI.xml" MD5="6EA7A0BF82241730501348E2D0EFC715" Size="0" RelativeCachePath="OSMMUI.xml" RelativeSourcePath="OSMMUI.xml"/>
+		<File Id="OSMMUI.msi" MD5="72B3CF35CB1BF62B484DE29427E20A05" Size="794624" RelativeCachePath="OSMMUI.msi" RelativeSourcePath="OSMMUI.msi"/>
+		<File Id="OSMMUI.cab" MD5="FEDF696379BBA914931FAF3D5698DA1D" Size="16637" RelativeCachePath="OSMMUI.cab" RelativeSourcePath="OSMMUI.cab"/>
+		<File Id="Setup.xml" MD5="" Size="" RelativeCachePath="Setup.xml" RelativeSourcePath="Setup.xml"/>
+	</LocalCache>
+</Setup>

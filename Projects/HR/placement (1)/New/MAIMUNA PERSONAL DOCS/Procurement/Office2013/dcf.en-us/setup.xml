@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_MODULUS=GgKBlAs5zeJSHrsRVaE/wa/GAR/l5ieG9XNs+VKpA/E4RJD4iYLFvSaMjgm9hZy3BmtP+/r5NnAa5V4zITn+oq55ZYhWTPD+/qb6kIIucIJihxXrl098Ve+ix6+0J/fjhB55t+mUhaLD1zzPp1lqq+ry26+IB6Bi9KloX3S2QCE=-->
+<!--_SIG=YStNBhvF/94AiS1izdPIr+YxT3zPF7n4/XQajjbYLLxHfQ2wrtkzj53WA6M356PuqjkSiwRiruA96a3Z6K6k7LIpXL+nEMgl9WHVD354GoNsPXLjqnTGieYtJ3W7i4VVWObKNNmDk66FzVY1aF3TZeM8ys74b0hud0gt57k4mEE=-->
+<Setup Id="DCF.en-us" Type="AddOn" Keyword="DCFMUI" Culture="en-us">
+	<Option Id="AlwaysInstalled" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="Gimme_OnDemandData" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="ProductFiles" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="no">
+		<Option Id="TOOLSFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no">
+			<Option Id="Prodiance" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="yes">
+				<OptionDependency Lead="ACCESSFiles"/>
+				<OptionDependency Lead="EXCELFiles"/>
+			</Option>
+		</Option>
+	</Option>
+	<PackageRef Path="DCFMUI.xml"/>
+	<LocalCache DownloadCode="{90150000-0090-0409-0000-0000000FF1CE}" SkuComponentDirectory="DCF.en-us">
+		<File Id="DCFMUI.xml" MD5="6F881EBAD82912BBC7561FD6BA2944D0" Size="0" RelativeCachePath="DCFMUI.xml" RelativeSourcePath="DCFMUI.xml"/>
+		<File Id="DCFMUI.msi" MD5="D431266EE07CF6498F4A3613B0DDC6F1" Size="1847296" RelativeCachePath="DCFMUI.msi" RelativeSourcePath="DCFMUI.msi"/>
+		<File Id="DCFMUI.cab" MD5="67757974376277FD344372C321B536D9" Size="643727" RelativeCachePath="DCFMUI.cab" RelativeSourcePath="DCFMUI.cab"/>
+		<File Id="Setup.xml" MD5="" Size="" RelativeCachePath="Setup.xml" RelativeSourcePath="Setup.xml"/>
+	</LocalCache>
+</Setup>

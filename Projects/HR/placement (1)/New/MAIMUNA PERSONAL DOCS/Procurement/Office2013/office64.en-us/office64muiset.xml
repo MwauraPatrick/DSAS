@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_MODULUS=poh04K/ZlURONTZtOtUuWz+zwjkiXn62p8TdCOqd8ehrGYD3VnAu/k/TQ/iRezrR5ghwUVsRkvJx2RlwmQbsQjXj0yvoWH5zszvn/H7q1IJfxaWjXxBQyxoCwr4t1MY9Nm/LstB6dc+JIBNlFI5Eg3/JO2qTCrgbKw1FwRcKLgE=-->
+<!--_SIG=6hbQjEOKznxbr0hikcXxdTu5fCjGioFM6KQwKSbpkf6xRh6LoPcoch8hn3FaVWKJnUfMQTnTGEpDNMtNlDUoP8X/F6FLLy5d5kknJEAYNuI1qrAHuq/PvLv9V0dwPaTlV28q74EAhSJuftrUTA3yjHAbQqUuztww52qDdEsm0DY=-->
+<Package Id="Office64MUISet.en-us" Type="MSI" Path="Office64MUISet.MSI" Version="1.0" ProductCode="{90150000-0116-0409-1000-0000000FF1CE}" MSIVersion="15.0.4420.1017" ProductLanguage="1033" Platform="x64">
+	<Feature Id="SetupXmlFiles" Cost="468">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="MsoInstalledPackagesScopedIntl_1033" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="SetupControllerFiles" Cost="468">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="Gimme_OnDemandData" Cost="0">
+		<OptionRef Id="Gimme_OnDemandData"/>
+	</Feature>
+</Package>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_MODULUS=x8lXEafweh+5wsPbUJ64CCk2OeoZ6Sm44tzOh94csneVoS+Gx3apWjeUDg70fhloBOkFr8PDXZkV4e6WQiHN/YWBXd6srs9HtP9TLB5XybtNawLva5QQdxFJWIw1fHJbiHdafGg0N+zpqtcH0FfmpFIh3Cx9P7926wq0HXIGpCM=-->
+<!--_SIG=FZrY9TGvqSiwnkUX5rPHcApr9G3zsLCD372rBEwcCNcyEeSkqpwEpn6HLtWfryYihJyombglLIiv+ZQNh9ejGZV1168PInTYlAXWa1OCxWlduejE0wz/RvazIenD0YEWY6Z8sbv+5W0YnCuiO6UqXn0OjX6z6OGNp8ObIjSAMYQ=-->
+<Setup Id="Access.en-us" Type="AddOn" Keyword="AccessMUI" Culture="en-us">
+	<Option Id="AlwaysInstalled" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="Gimme_OnDemandData" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="ProductFiles" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="no">
+		<Option Id="ACCESSFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no">
+			<Option Id="AccessHelpFiles" DefaultState="FollowParent" DisallowAbsent="yes" DisallowAdvertise="no" Hidden="yes"/>
+			<Option Id="AccessTemplatesIntl" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="yes"/>
+		</Option>
+	</Option>
+	<PackageRef Path="AccessMUISet.xml"/>
+	<PackageRef Path="Access.en-us\AccessMUI.xml" InstalledPath="..\Access.en-us\AccessMUI.xml"/>
+	<LocalCache DownloadCode="{90150000-0117-0409-0000-0000000FF1CE}" SkuComponentDirectory="Access.en-us">
+		<File Id="AccessMUISet.xml" MD5="9F0DC9C580A9F3986E33BDDA0C6A5055" Size="0" RelativeCachePath="AccessMUISet.xml" RelativeSourcePath="AccessMUISet.xml"/>
+		<File Id="AccessMUISet.msi" MD5="758178C1983A5129D8ACCAA44945418D" Size="626688" RelativeCachePath="AccessMUISet.msi" RelativeSourcePath="AccessMUISet.msi"/>
+		<File Id="Access.en-us\AccessMUI.xml" MD5="52C25BFAF2BF5F3E8A610DB09E884FEC" Size="0" RelativeCachePath="Access.en-us\AccessMUI.xml" RelativeSourcePath="Access.en-us\AccessMUI.xml"/>
+		<File Id="Access.en-us\AccessMUI.msi" MD5="A383498A8BF697453CC82923763E5013" Size="1855488" RelativeCachePath="Access.en-us\AccessMUI.msi" RelativeSourcePath="Access.en-us\AccessMUI.msi"/>
+		<File Id="Access.en-us\AccLR.cab" MD5="9C9FB2C3972D74ECD7CA7730F26D2DAC" Size="5128502" RelativeCachePath="Access.en-us\AccLR.cab" RelativeSourcePath="Access.en-us\AccLR.cab"/>
+		<File Id="Access.en-us\branding.xml" MD5="4779EF878505ACE9FC232DEAF96CB191" Size="0" RelativeCachePath="Access.en-us\branding.xml" RelativeSourcePath="Access.en-us\branding.xml"/>
+		<File Id="Setup.xml" MD5="" Size="" RelativeCachePath="Setup.xml" RelativeSourcePath="Setup.xml"/>
+	</LocalCache>
+</Setup>

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_MODULUS=BF+wND+D9GKRJkkxq3OZPEkRptI2Y+9zt03FHCsT5+nZyZbNywPjN0ZUJVWt/QGoQOuMQu9m5l+Px72MTlXl40Vbg1pTuqbOJIeU1awHjjTrDms2JXcPrEj596q+DpJp8PkFDqlBls5hY+IHZPvBFV+5tJwqfAKfvhtAnwO/aV8=-->
+<!--_SIG=+O35HUrJl37ov1gxD71UiwBFyolA7nkbKwwGgvpbkWYXshcsB6CW7B0U8HBLBZZeValncvLOIWIE0RlPpEPNXBO/VC2BIUU9Z3Yz5haVUZqgdbqeGJOzXGWe3NYM4CcD7zejC1Rn7gzl75jZVAbq/7Qd6KUEu8QEKnaRxb0CC1A=-->
+<Package Id="Office64WW" Type="MSI" Path="Office64WW.MSI" Version="1.0" ProductCode="{90150000-002A-0000-1000-0000000FF1CE}" MSIVersion="15.0.4420.1017" ProductLanguage="0" Platform="x64" LocalizationTransform="ShellUI">
+	<Feature Id="ProductNonBootFiles64" Cost="535704">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="ExcelXmlEditVerb64" Cost="0">
+		<OptionRef Id="ExcelXmlEditVerb64"/>
+	</Feature>
+	<Feature Id="MsoCommonShellHandler64bit" Cost="1014568">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="ProductFiles64" Cost="33067792">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="WAC_XmlEditVerb64SPD" Cost="0">
+		<OptionRef Id="WAC_XmlEditVerb64SPD"/>
+	</Feature>
+	<Feature Id="WordXmlEditVerb64" Cost="0">
+		<OptionRef Id="WordXmlEditVerb64"/>
+	</Feature>
+	<Feature Id="TCDRegistration64" Cost="0">
+		<OptionRef Id="TCDRegistration"/>
+	</Feature>
+	<Feature Id="Visio64Files" Cost="4843784">
+		<OptionRef Id="Visio64Files"/>
+	</Feature>
+	<Feature Id="XDocsXmlEditVerb64" Cost="0">
+		<OptionRef Id="XDocsXmlEditVerb64"/>
+	</Feature>
+	<Feature Id="Visio64ShapeSearch" Cost="2312">
+		<OptionRef Id="Visio64ShapeSearch"/>
+	</Feature>
+	<Feature Id="OSpp64" Cost="2233044">
+		<OptionRef Id="OSpp"/>
+	</Feature>
+	<Feature Id="OsmSKUMain64bit" Cost="393528">
+		<OptionRef Id="OsmSKUMain"/>
+	</Feature>
+	<Feature Id="Lync32With64Bits" Cost="343472">
+		<OptionRef Id="Lync32With64Bits"/>
+	</Feature>
+	<Feature Id="ProjectPiaReg64" Cost="0">
+		<OptionRef Id="ProjectPiaReg64"/>
+	</Feature>
+	<Feature Id="VisioPiaReg64" Cost="0">
+		<OptionRef Id="VisioPiaReg64"/>
+	</Feature>
+	<Feature Id="VBEPiaReg64" Cost="0">
+		<OptionRef Id="VBEPiaReg64"/>
+	</Feature>
+	<Feature Id="AlwaysInstalled64" Cost="240256">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="AcePiaReg64" Cost="0">
+		<OptionRef Id="AcePiaReg64"/>
+	</Feature>
+	<Feature Id="Project64Files" Cost="367240">
+		<OptionRef Id="Project64Files"/>
+	</Feature>
+	<Feature Id="XDOCSFiles64" Cost="285312">
+		<OptionRef Id="XDOCSFiles64"/>
+	</Feature>
+	<Feature Id="SetupControllerFiles" Cost="234">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="AccessPiaReg64" Cost="0">
+		<OptionRef Id="AccessPiaReg64"/>
+	</Feature>
+	<Feature Id="OutlookPiaReg64" Cost="0">
+		<OptionRef Id="OutlookPiaReg64"/>
+	</Feature>
+	<Feature Id="PublisherPiaReg64" Cost="0">
+		<OptionRef Id="PublisherPiaReg64"/>
+	</Feature>
+	<Feature Id="GraphPiaReg64" Cost="0">
+		<OptionRef Id="GraphPiaReg64"/>
+	</Feature>
+	<Feature Id="OfficeExample64bitFilesA" Cost="78">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="Outlook64SearchShellReg" Cost="64736">
+		<OptionRef Id="Outlook64SearchShellReg"/>
+	</Feature>
+	<Feature Id="OSpp64_Core" Cost="7372649">
+		<OptionRef Id="OSpp_Core"/>
+	</Feature>
+	<Feature Id="PowerPointPiaReg64" Cost="0">
+		<OptionRef Id="PowerPointPiaReg64"/>
+	</Feature>
+	<Feature Id="XDocsPiaReg64" Cost="0">
+		<OptionRef Id="XDocsPiaReg64"/>
+	</Feature>
+	<Feature Id="OneNotePIAReg64" Cost="0">
+		<OptionRef Id="OneNotePiaReg64"/>
+	</Feature>
+	<Feature Id="VSTO64" Cost="1330887">
+		<OptionRef Id="VSTO64"/>
+	</Feature>
+	<Feature Id="OfficeExample64bitFilesB" Cost="78">
+		<OptionRef Id="TOOLSFiles"/>
+	</Feature>
+	<Feature Id="OfficePiaReg64" Cost="0">
+		<OptionRef Id="OfficePiaReg64"/>
+	</Feature>
+	<Feature Id="WordPiaReg64" Cost="0">
+		<OptionRef Id="WordPiaReg64"/>
+	</Feature>
+	<Feature Id="Gimme_OnDemandData" Cost="0">
+		<OptionRef Id="Gimme_OnDemandData"/>
+	</Feature>
+	<Feature Id="OneNote64Files" Cost="3688823">
+		<OptionRef Id="OneNote64Files"/>
+	</Feature>
+	<Feature Id="ExcelPiaReg64" Cost="0">
+		<OptionRef Id="ExcelPiaReg64"/>
+	</Feature>
+	<Feature Id="SmartTagPiaReg64" Cost="0">
+		<OptionRef Id="SmartTagPiaReg64"/>
+	</Feature>
+	<Feature Id="GrooveShellIntegration64" Cost="2322576">
+		<OptionRef Id="GrooveShellIntegration64"/>
+	</Feature>
+	<Feature Id="WAC_PIARegSPD64" Cost="0">
+		<OptionRef Id="WAC_PIARegSPD64"/>
+	</Feature>
+	<Feature Id="MsoInstalledPackagesScoped" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="SearchFilters64Files" Cost="2181560">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="SetupXmlFiles" Cost="234">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="PPTXmlEditVerb64" Cost="0">
+		<OptionRef Id="PPTXmlEditVerb64"/>
+	</Feature>
+	<Feature Id="FormsPiaReg64" Cost="0">
+		<OptionRef Id="FormsPiaReg64"/>
+	</Feature>
+	<Feature Id="Outlook64Files" Cost="258704">
+		<OptionRef Id="Outlook64Files"/>
+	</Feature>
+</Package>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_MODULUS=SNO2SekTDohKW3gpwPRgQr0UpHPBzrly43ptDRPmh+64ALLtioAF9oy3LQXatnI8wHxnQaUbRbQKDOLHbVWtviu9JuofkEOt2cvDnQwgAq4q4CCTPbv7D8zCjlXUEIfhk4kWotOghs1f51+xfYu9Qyg/JQlWJ+I3+gww7smTOlc=-->
+<!--_SIG=uBD1h/ggiQWYmtKeR2TwCpDVbXylCKxF8K1uuEWgLMqIgCiTlCkcgZkRFmI7fP2aeTzIggBVOeeDWv8zFgK7bxfBm7UfmpfD+/dejEgUBHZ5e/E/o48SXnNHs8XkScYerm6Z3pCKa2hk6ie7kH55BEdmpgS4ZU7tBcYcpvYyfT4=-->
+<Setup Id="Excel.en-us" Type="AddOn" Keyword="ExcelMUI" Culture="en-us">
+	<Option Id="AlwaysInstalled" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="Gimme_OnDemandData" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="yes" Hidden="yes"/>
+	<Option Id="ProductFiles" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="no">
+		<Option Id="EXCELFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no">
+			<Option Id="ExcelAddinFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no">
+				<Option Id="ExcelAddinATPFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no"/>
+				<Option Id="ExcelAddinSolverFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="no"/>
+			</Option>
+			<Option Id="ExcelHelpFiles" DefaultState="Local" DisallowAbsent="yes" DisallowAdvertise="no" Hidden="yes">
+				<OptionDependency Lead="EXCELFiles"/>
+			</Option>
+			<Option Id="ExcelSampleFiles" DefaultState="Local" DisallowAbsent="no" DisallowAdvertise="yes"/>
+		</Option>
+		<Option Id="WhiteRabbitHidden" DefaultState="Absent" DisallowAbsent="no" DisallowAdvertise="yes" Hidden="yes">
+			<OptionDependency Lead="WORDFiles"/>
+			<OptionDependency Lead="EXCELFiles"/>
+			<OptionDependency Lead="OUTLOOKFiles"/>
+		</Option>
+	</Option>
+	<PackageRef Path="ExcelMUI.xml"/>
+	<LocalCache DownloadCode="{90150000-0016-0409-0000-0000000FF1CE}" SkuComponentDirectory="Excel.en-us">
+		<File Id="ExcelMUI.xml" MD5="EEE4F3059C8214679DBA9F183CBAD36E" Size="0" RelativeCachePath="ExcelMUI.xml" RelativeSourcePath="ExcelMUI.xml"/>
+		<File Id="ExcelMUI.msi" MD5="3B860267082CCC780E7B4877F3E21B4D" Size="1851392" RelativeCachePath="ExcelMUI.msi" RelativeSourcePath="ExcelMUI.msi"/>
+		<File Id="ExcelLR.cab" MD5="0FD6A4FA43C0212AE4567EFE3CE63E49" Size="3835096" RelativeCachePath="ExcelLR.cab" RelativeSourcePath="ExcelLR.cab"/>
+		<File Id="Setup.xml" MD5="" Size="" RelativeCachePath="Setup.xml" RelativeSourcePath="Setup.xml"/>
+	</LocalCache>
+</Setup>
