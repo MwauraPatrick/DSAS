@@ -1,0 +1,22 @@
+odpc
+As a handler and controller
+
+
+- Malware attacks e.g trojans, spyware, adware, scareware, ransomware, botnets, key logger, worms, rootkits, virus, fileless malware   -yy
+- Password theft--yy
+- Phising attacks --yy
+- Social engineering e.g Baiting, shoulder surfing, dumbper diving--yy
+- Ransomware--yy
+- Fraud e.g., sim swap, embezzlement, insider trading--yy
+- Cyberespionage--yy
+- Theft of financial or Card payment data--yy
+- Cyber extortion e.g., bribery--yy
+- Distributed denial of service--yy
+- Theft and sale of corporate data--y
+- Theft and financial or card payment data--y
+- Email and internet fraud--y
+- Advanced persistent threats (APT) - Including remote file inclusion, SQL injection and cross-site scripting--y
+- Cloud attack- A cyber attack that targets off site service platforms that offer storage, computing, or hosting services via their cloud infrastructure--y
+
+
+Does our data reside outside kenya-- No
