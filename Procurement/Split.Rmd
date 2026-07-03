@@ -1,0 +1,39 @@
+---
+title: "Procument"
+author: "Patrick Mwaura"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readxl)
+Search_Budget_1_ <- read_excel("E:/DSAS/Procurement/Search_Budget (1).xlsx")
+View(Search_Budget_1_)
+```
+
+## 
+
+```{r}
+library(readxl)
+library(openxlsx)
+
+data <- read_excel("Search_Budget (1).xlsx")
+
+split_col <- names(data)[2]
+
+unique_values <- unique(data[[split_col]])
+
+for (val in unique_values) {
+  
+  df_subset <- data[data[[split_col]] == val, ]
+  
+  file_name <- paste0(
+    gsub("[^[:alnum:]_ -]", "_", as.character(val)),
+    ".xlsx"
+  )
+  
+  write.xlsx(df_subset, file_name, overwrite = TRUE)
+}
+```
