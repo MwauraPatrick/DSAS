@@ -1,0 +1,479 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+% =========================================================
+% PRESENTATION THEME
+% =========================================================
+
+\usetheme{default}
+
+% ---------------------------------------------------------
+% Packages
+% ---------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{ragged2e}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{xcolor}
+
+% ---------------------------------------------------------
+% General layout
+% ---------------------------------------------------------
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}{}
+
+\setbeamersize{
+    text margin left=0.65cm,
+    text margin right=0.65cm
+}
+
+% =========================================================
+% COLOUR PALETTE
+% =========================================================
+
+% ---------------------------------------------------------
+% KIPRE colours
+% ---------------------------------------------------------
+\definecolor{kipregreen}{RGB}{0,105,92}
+\definecolor{kipredark}{RGB}{0,70,63}
+\definecolor{kiprelight}{RGB}{232,244,242}
+\definecolor{kipregrey}{RGB}{90,90,90}
+\definecolor{kipredarkgrey}{RGB}{45,45,45}
+
+% ---------------------------------------------------------
+% Executive colours
+% ---------------------------------------------------------
+
+% Blue
+\definecolor{execblue}{RGB}{45,91,125}
+\definecolor{execbluebg}{RGB}{235,243,249}
+
+% Green
+\definecolor{execgreen}{RGB}{52,112,72}
+\definecolor{execgreenbg}{RGB}{236,246,239}
+
+% Amber
+\definecolor{execamber}{RGB}{165,105,35}
+\definecolor{execamberbg}{RGB}{250,244,232}
+
+% ---------------------------------------------------------
+% Beamer colours
+% ---------------------------------------------------------
+\setbeamercolor{normal text}{
+    fg=kipredarkgrey,
+    bg=white
+}
+
+\setbeamercolor{frametitle}{
+    fg=kipredark,
+    bg=white
+}
+
+\setbeamercolor{title}{
+    fg=kipredark
+}
+
+\setbeamercolor{structure}{
+    fg=kipregreen
+}
+
+\setbeamercolor{block title}{
+    fg=white,
+    bg=kipregreen
+}
+
+\setbeamercolor{block body}{
+    fg=kipredarkgrey,
+    bg=kiprelight
+}
+
+\setbeamercolor{alertblock title}{
+    fg=white,
+    bg=kipredark
+}
+
+\setbeamercolor{alertblock body}{
+    fg=kipredarkgrey,
+    bg=kiprelight
+}
+
+% ---------------------------------------------------------
+% Executive box colours
+% ---------------------------------------------------------
+
+\setbeamercolor{bluebox}{
+    fg=kipredarkgrey,
+    bg=execbluebg
+}
+
+\setbeamercolor{greenbox}{
+    fg=kipredarkgrey,
+    bg=execgreenbg
+}
+
+\setbeamercolor{amberbox}{
+    fg=kipredarkgrey,
+    bg=execamberbg
+}
+
+% ---------------------------------------------------------
+% Fonts
+% ---------------------------------------------------------
+\setbeamerfont{frametitle}{
+    size=\Large,
+    series=\bfseries
+}
+
+\setbeamerfont{block title}{
+    size=\normalsize,
+    series=\bfseries
+}
+
+\setbeamerfont{block body}{
+    size=\small
+}
+
+% ---------------------------------------------------------
+% Frame title
+% ---------------------------------------------------------
+\setbeamertemplate{frametitle}{
+    \vspace{0.15cm}
+    \insertframetitle
+    \par
+    \vspace{0.10cm}
+    \noindent
+    {\color{kipregreen}\rule{\textwidth}{1.2pt}}
+    \vspace{0.12cm}
+}
+
+% ---------------------------------------------------------
+% Blocks
+% ---------------------------------------------------------
+\setbeamertemplate{blocks}[rounded][shadow=false]
+
+% ---------------------------------------------------------
+% Bullet formatting
+% ---------------------------------------------------------
+\setbeamertemplate{itemize item}{
+    \color{kipregreen}\small$\blacktriangleright$
+}
+
+\setbeamertemplate{itemize subitem}{
+    \color{kipregreen}\scriptsize$\blacktriangleright$
+}
+
+\setlength{\leftmargini}{1.4em}
+\setlength{\leftmarginii}{1.2em}
+
+% =========================================================
+% METADATA
+% =========================================================
+
+\title{%
+    \textbf{Kenya Institute of Primate Research}\\[0.2em]
+    \large Key Achievements and Capacity Requirements
+}
+
+\subtitle{%
+    Supplementary Budget Presentation to the Parliamentary Committee on Health
+}
+
+\author{%
+    Kenya Institute of Primate Research (KIPRE)
+}
+
+\institute{%
+    \textbf{2026}
+}
+
+\date{}
+
+% =========================================================
+% DOCUMENT
+% =========================================================
+
+\begin{document}
+% =========================================================
+% SLIDE 1: KEY ACHIEVEMENTS
+% =========================================================
+
+\begin{frame}{Key achievements: Data Science \& Analytics}
+
+\vspace{-0.45em}
+
+% =========================================================
+% ACHIEVEMENT 01
+% =========================================================
+
+\begin{beamercolorbox}[
+    wd=\textwidth,
+    sep=0.16cm,
+    rounded=true
+]{bluebox}
+
+\begin{columns}[c,totalwidth=\textwidth]
+
+\column{0.34\textwidth}
+\textcolor{execblue}{\textbf{DATA PROTECTION}}\\
+\textcolor{execblue}{\textbf{\& COMPLIANCE}}
+
+\column{0.62\textwidth}
+\raggedright
+{\normalsize
+\textbf{KIPRE registered with ODPC} | 
+\textbf{DPO appointed}
+}
+
+\end{columns}
+
+\end{beamercolorbox}
+
+\vspace{0.12cm}
+
+% =========================================================
+% ACHIEVEMENT 02
+% =========================================================
+
+\begin{beamercolorbox}[
+    wd=\textwidth,
+    sep=0.16cm,
+    rounded=true
+]{greenbox}
+
+\begin{columns}[c,totalwidth=\textwidth]
+
+\column{0.34\textwidth}
+\textcolor{execgreen}{\textbf{DATA GOVERNANCE}}
+
+\column{0.62\textwidth}
+\raggedright
+{\normalsize
+\textbf{Data Governance Framework submitted}
+| 
+\textbf{Governance Champions mapped}
+}
+
+\end{columns}
+
+\end{beamercolorbox}
+
+\vspace{0.12cm}
+
+% =========================================================
+% ACHIEVEMENT 03
+% =========================================================
+
+\begin{beamercolorbox}[
+    wd=\textwidth,
+    sep=0.16cm,
+    rounded=true
+]{amberbox}
+
+\begin{columns}[c,totalwidth=\textwidth]
+
+\column{0.34\textwidth}
+\textcolor{execamber}{\textbf{RESEARCH ANALYTICS}}
+
+\column{0.62\textwidth}
+\raggedright
+{\normalsize
+\textbf{24 SOPs developed \& operationalized }|
+\textbf{>5 projects supported} | 
+\textbf{>15 Staff trained}
+}
+
+\end{columns}
+
+\end{beamercolorbox}
+
+\vspace{0.18cm}
+
+% =========================================================
+% INSTITUTIONAL VALUE
+% =========================================================
+
+\begin{beamercolorbox}[
+    wd=\textwidth,
+    sep=0.14cm,
+    rounded=true
+]{alertblock body}
+
+\centering
+{\large
+\textbf{Institutional capability established for governed, protected}\\
+\textbf{and analytically enabled research}
+}
+
+\end{beamercolorbox}
+
+\end{frame}
+% =========================================================
+% SLIDE 2: CAPACITY REQUIREMENTS
+% =========================================================
+
+\begin{frame}{Capacity challenges for the expanded mandate}
+
+\vspace{-0.35em}
+
+% =========================================================
+% INTRODUCTORY STATEMENT
+% =========================================================
+
+
+\vspace{-0.6cm}
+
+% =========================================================
+% THREE-STAGE CAPACITY LOGIC
+% =========================================================
+
+\begin{columns}[T,totalwidth=\textwidth]
+
+% ---------------------------------------------------------
+% 01 EXPANDED MANDATE
+% ---------------------------------------------------------
+
+\column{0.31\textwidth}
+
+\begin{beamercolorbox}[
+    wd=\textwidth,
+    ht=3.25cm,
+    dp=0.15cm,
+    sep=0.5cm,
+    rounded=true
+]{bluebox}
+
+
+\textcolor{execblue}{\large\textbf{EXPANDED MANDATE}}
+
+\vspace{0.16cm}
+
+{\normalsize
+- Research data\\
+- Analytics\\
+- Data governance
+}
+
+\end{beamercolorbox}
+
+% ---------------------------------------------------------
+% ARROW
+% ---------------------------------------------------------
+
+\column{0.035\textwidth}
+
+\vspace{1.25cm}
+
+\centering
+{\Large\textcolor{kipregrey}{$\longrightarrow$}}
+
+% ---------------------------------------------------------
+% 02 CAPACITY GAP
+% ---------------------------------------------------------
+
+\column{0.31\textwidth}
+
+\begin{beamercolorbox}[
+    wd=\textwidth,
+    ht=3.25cm,
+    dp=0.15cm,
+    sep=0.46cm,
+    rounded=true
+]{greenbox}
+
+
+\textcolor{execgreen}{\large\textbf{CAPACITY GAP}}
+
+\vspace{0.16cm}
+
+{\normalsize
+- Specialized personnel\\
+- Digital infrastructure\\
+- Governance capacity
+}
+
+\end{beamercolorbox}
+
+% ---------------------------------------------------------
+% ARROW
+% ---------------------------------------------------------
+
+\column{0.035\textwidth}
+
+\vspace{1.25cm}
+
+\centering
+{\Large\textcolor{kipregrey}{$\longrightarrow$}}
+
+% ---------------------------------------------------------
+% 03 INVESTMENT PRIORITY
+% ---------------------------------------------------------
+
+\column{0.31\textwidth}
+
+\begin{beamercolorbox}[
+    wd=\textwidth,
+    ht=3.25cm,
+    dp=0.15cm,
+    sep=0.16cm,
+    rounded=true
+]{amberbox}
+
+\textcolor{execamber}{\large\textbf{INVESTMENT PRIORITY}}
+
+\vspace{0.16cm}
+
+{\normalsize
+- Human resources\\
+- Computing \& data systems\\
+- IDGF implementation
+}
+
+\end{beamercolorbox}
+
+\end{columns}
+
+\vspace{0.28cm}
+
+% =========================================================
+% EVIDENCE STRIP
+% =========================================================
+
+\begin{beamercolorbox}[
+    wd=\textwidth,
+    sep=0.13cm,
+    rounded=true
+]{kiprelight}
+
+\centering
+{\normalsize
+\textbf{Institution-wide capacity assessment:}
+\quad
+80 of 189 staff assessed across 23 divisions and 7 directorates
+}
+
+\end{beamercolorbox}
+
+\vspace{0.18cm}
+
+% =========================================================
+% FINAL BUDGET MESSAGE
+% =========================================================
+
+\begin{beamercolorbox}[
+    wd=\textwidth,
+    sep=0.14cm,
+    rounded=true
+]{alertblock body}
+
+\centering
+{\large
+\textbf{Priority: Align institutional capacity and infrastructure with KIPRE's expanded mandate}
+}
+
+\end{beamercolorbox}
+
+\end{frame}
+\end{document}
