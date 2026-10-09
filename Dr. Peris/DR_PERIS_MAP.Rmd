@@ -1,0 +1,179 @@
+---
+title: "Untitled"
+author: "Patrick Mwuara"
+date: "2026-10-08"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+rm(list=ls())
+
+knitr::opts_chunk$set(echo = T, include = F)
+
+# install.packages(c(
+#   "rgee",
+#   "sf",
+#   "terra",
+#   "dplyr",
+#   "tidyr",
+#   "ggplot2",
+#   "exactextractr",
+#   "randomForest",
+#   "caret",
+#   "patchwork"
+# ))
+
+
+library(terra)
+library(sf)
+library(tidyverse)
+library(randomForest)
+library(tmap)
+library(geodata)
+library(mapview)
+library(rstac)
+library(terra)
+library(sf)
+library(rgee)
+```
+
+
+# Download the Kenyan Administrative boundaries
+
+```{r}
+# Kenya administrative boundaries
+kenya_adm2 <- geodata::gadm(
+  country = "KEN",
+  level = 2,
+  path = "01_data/boundary"
+)
+
+
+kenya_adm2
+names(kenya_adm2)
+sort(unique(kenya_adm2$NAME_2))
+
+grep(
+  "Tharaka",
+  unique(kenya_adm2$NAME_2),
+  value = TRUE
+)
+
+```
+
+# Extract Tharaka subcounty and save the shape file
+
+```{r}
+
+tharaka <- kenya_adm2[
+  kenya_adm2$NAME_2 == "Tharaka",
+]
+
+plot(tharaka, col="lightgreen", labels="Tharaka")
+
+
+writeVector(
+  tharaka,
+  "01_data/boundary/Tharaka_SubCounty.shp",
+  overwrite = TRUE
+)
+
+expanse(
+  tharaka,
+  unit = "km"
+)
+
+sort(
+  unique(
+    kenya_adm2$NAME_2[
+      kenya_adm2$NAME_1 == "Tharaka-Nithi"
+    ]
+  )
+)
+
+study_area <- tharaka
+
+plot(study_area)
+
+
+bbox <- ext(study_area)
+bbox
+
+saveRDS(
+  study_area,
+  "01_data/boundary/tharaka_study_area.rds"
+)
+
+
+
+study_area_sf <- st_as_sf(study_area)
+
+study_area_sf
+
+
+```
+# Get the boundaries
+
+```{r}
+
+
+crs(tharaka)
+```
+```{r}
+bbox <- st_bbox(st_as_sf(study_area))
+
+bbox
+
+bbox_vec <- c(
+  bbox["xmin"],
+  bbox["ymin"],
+  bbox["xmax"],
+  bbox["ymax"]
+)
+
+stac_obj <- stac(
+  "https://planetarycomputer.microsoft.com/api/stac/v1"
+)
+```
+
+```{r}
+items_2000 <- stac_obj |>
+  stac_search(
+    collections = "landsat-c2-l2",
+    bbox = bbox_vec,
+    datetime = "2000-02-10/2000-02-20"
+  ) |>
+  get_request()
+
+length(items_2000$features)
+# items_2000$features[[1]]$properties
+```
+
+```{r}
+
+# =========================================================
+# 1. IDENTIFY THARAKA SUB-COUNTY
+# =========================================================
+
+library(rgee)
+
+# Use the existing Earth Engine connection
+gaul2 <- ee$FeatureCollection("FAO/GAUL/2015/level2")
+
+# Approximate search area around Tharaka
+search_area <- ee$Geometry$Rectangle(
+  c(37.6, -0.8, 38.7, 0.5)
+)
+
+# Find administrative units in the search area
+nearby_units <- gaul2$filterBounds(search_area)
+
+# Inspect candidate administrative names
+admin_names <- nearby_units$
+  select(c("ADM0_NAME", "ADM1_NAME", "ADM2_NAME"))$
+  getInfo()
+
+print(admin_names)
+
+```
+

@@ -1,0 +1,971 @@
+---
+title: "Land Cover Analysis of Tharaka Sub-county, Tharaka Nithi County, Kenya"
+author: "Patrick Waweru Mwaura"
+date: "2026-10-08"
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+rm(list=ls())
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE
+)
+
+# =========================================================
+# 0. PACKAGES AND PROJECT DIRECTORIES
+# =========================================================
+
+required_packages <- c(
+  "terra",
+  "sf",
+  "tidyverse",
+  "geodata",
+  "rgee"
+)
+
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace,
+          logical(1), quietly = TRUE)
+]
+
+if (length(missing_packages) > 0) {
+  stop(
+    "Install missing packages first: ",
+    paste(missing_packages, collapse = ", ")
+  )
+}
+
+library(terra)
+library(sf)
+library(tidyverse)
+library(geodata)
+library(rgee)
+
+dir.create("01_data/boundary",
+           recursive = TRUE, showWarnings = FALSE)
+dir.create("01_data/landsat",
+           recursive = TRUE, showWarnings = FALSE)
+dir.create("02_outputs/tables",
+           recursive = TRUE, showWarnings = FALSE)
+dir.create("02_outputs/figures",
+           recursive = TRUE, showWarnings = FALSE)
+
+# Do not use rm(list = ls()) here:
+# it can remove objects needed by the workflow.
+```
+
+# 1. Study design
+
+This study examines land-cover patterns and changes in Tharaka
+Sub-county, Tharaka Nithi County, Kenya.
+
+The target years are 2000, 2010, 2020 and 2025.
+
+The land-cover classes of interest are:
+
+- Grassland
+- Bushland
+- Cultivated farmland
+- Settlement
+
+Four observation windows will be investigated:
+
+| Season | Window |
+|---|---|
+| Dry | February 10–20 |
+| Dry | September 15–25 |
+| Wet | May 5–30 |
+| Wet | December 5–30 |
+
+The initial stage retrieves and prepares satellite imagery.
+Classification and accuracy assessment will follow after suitable
+training samples have been established.
+
+# 2. Obtain Kenya's administrative boundaries
+
+```{r gadm-boundaries}
+# =========================================================
+# 2. DOWNLOAD GADM LEVEL-2 BOUNDARIES
+# =========================================================
+
+kenya_adm2 <- geodata::gadm(
+  country = "KEN",
+  level = 2,
+  path = "01_data/boundary"
+)
+
+print(kenya_adm2)
+print(names(kenya_adm2))
+
+# Inspect all available second-level administrative names
+sort(unique(kenya_adm2$NAME_2))
+
+# Identify possible Tharaka matches
+grep(
+  "Tharaka",
+  unique(kenya_adm2$NAME_2),
+  value = TRUE,
+  ignore.case = TRUE
+)
+
+# List level-2 units within Tharaka-Nithi County
+sort(unique(
+  kenya_adm2$NAME_2[
+    kenya_adm2$NAME_1 == "Tharaka-Nithi"
+  ]
+))
+```
+
+# 3. Extract and save Tharaka Sub-county
+
+```{r study-boundary}
+# =========================================================
+# 3. EXTRACT THE STUDY AREA
+# =========================================================
+
+tharaka <- kenya_adm2[
+  kenya_adm2$NAME_2 == "Tharaka" &
+    kenya_adm2$NAME_1 == "Tharaka-Nithi",
+]
+
+if (nrow(tharaka) != 1) {
+  stop(
+    "Expected exactly one Tharaka feature. ",
+    "Inspect the administrative names printed above ",
+    "and adjust the selection before continuing."
+  )
+}
+
+study_area <- tharaka
+
+# Inspect the boundary
+print(study_area)
+print(terra::crs(study_area))
+
+plot(
+  study_area,
+  col = "lightgreen",
+  main = "Tharaka Sub-county Study Area"
+)
+
+# Save vector boundary
+terra::writeVector(
+  study_area,
+  "01_data/boundary/Tharaka_SubCounty.shp",
+  overwrite = TRUE
+)
+
+# Save native R object
+saveRDS(
+  study_area,
+  "01_data/boundary/tharaka_study_area.rds"
+)
+
+# Calculate approximate area
+area_km2 <- sum(
+  terra::expanse(study_area, unit = "km")
+)
+
+print(area_km2)
+
+# Convert to sf and use geographic coordinates for Earth Engine
+study_area_sf <- sf::st_as_sf(study_area)
+
+study_area_sf <- sf::st_transform(
+  study_area_sf,
+  4326
+)
+
+print(sf::st_bbox(study_area_sf))
+```
+
+# 4. Initialize Google Earth Engine
+
+The Earth Engine API is installed in the dedicated `rgee`
+Python environment. A previous initialization attempt reached
+the API but reported that the Cloud Asset root was missing.
+
+The code below catches that particular initialization error and
+checks whether a basic Earth Engine request still works. It does
+not suppress a genuine failure to access Earth Engine.
+
+```{r earth-engine-setup}
+
+# =========================================================
+# 4. EARTH ENGINE CONNECTION
+# =========================================================
+
+ee_project <- "thinking-leaf-305215"
+
+# Import Earth Engine API
+ee <- reticulate::import("ee", convert = FALSE)
+
+# Initialize Earth Engine directly; bypass rgee asset-root prompts
+ee$Initialize(project = ee_project)
+
+# ---------------------------------------------------------
+# Test 1: Basic API request
+# ---------------------------------------------------------
+
+ee_test <- reticulate::py_to_r(
+  ee$Number(1)$getInfo()
+)
+
+stopifnot(as.numeric(ee_test) == 1)
+
+message("Basic Earth Engine request succeeded.")
+
+# ---------------------------------------------------------
+# Test 2: Landsat collection access
+# ---------------------------------------------------------
+
+landsat_test <- reticulate::py_to_r(
+  ee$
+    ImageCollection("LANDSAT/LC08/C02/T1_L2")$
+    limit(1)$
+    size()$
+    getInfo()
+)
+
+stopifnot(as.numeric(landsat_test) == 1)
+
+message("Landsat collection access succeeded.")
+message("Earth Engine project: ", ee_project)
+
+```
+
+# 5. Convert the study boundary to Earth Engine geometry
+
+```{r earth-engine-boundary}
+# =========================================================
+# 5. CONVERT LOCAL BOUNDARY TO EARTH ENGINE GEOMETRY
+# =========================================================
+
+roi_fc <- rgee::sf_as_ee(
+  study_area_sf,
+  via = "getInfo"
+)
+
+roi <- roi_fc$geometry()
+
+# Confirm that a collection can be queried over the boundary
+boundary_test <- ee$ImageCollection(
+  "LANDSAT/LC08/C02/T1_L2"
+)$filterBounds(roi)$limit(1)$size()$getInfo()
+
+print(boundary_test)
+```
+
+# 6. Define seasonal observation windows
+
+```{r seasonal-windows}
+# =========================================================
+# 6. TARGET YEARS AND SEASONAL WINDOWS
+# =========================================================
+
+years <- c(2000, 2010, 2020, 2025)
+
+windows <- tibble::tibble(
+  window = c(
+    "dry_feb",
+    "dry_sep",
+    "wet_may",
+    "wet_dec"
+  ),
+  season = c(
+    "Dry",
+    "Dry",
+    "Wet",
+    "Wet"
+  ),
+  start_month = c(2, 9, 5, 12),
+  start_day = c(10, 15, 5, 5),
+  end_month = c(2, 9, 5, 12),
+  end_day = c(20, 25, 30, 30)
+)
+
+print(windows)
+```
+
+# 7. Cloud masking and Landsat band harmonization
+
+The code uses Landsat Collection 2 Level-2 surface reflectance.
+The common output bands are blue, green, red, near-infrared,
+shortwave infrared 1 and shortwave infrared 2.
+
+```{r landsat-functions}
+# =========================================================
+# 7. LANDSAT MASKING AND SCALING
+# =========================================================
+
+mask_scale_l57 <- function(img) {
+
+  qa <- img$select("QA_PIXEL")
+
+  # Mask fill, dilated cloud, cirrus bit, cloud,
+  # cloud shadow and snow flags.
+  mask <- qa$bitwiseAnd(63)$eq(0)
+
+  saturation <- img$select("QA_RADSAT")$eq(0)
+
+  img$
+    updateMask(mask)$
+    updateMask(saturation)$
+    select(
+      c(
+        "SR_B1", "SR_B2", "SR_B3",
+        "SR_B4", "SR_B5", "SR_B7"
+      ),
+      c(
+        "blue", "green", "red",
+        "nir", "swir1", "swir2"
+      )
+    )$
+    multiply(0.0000275)$
+    add(-0.2)
+}
+
+mask_scale_l89 <- function(img) {
+
+  qa <- img$select("QA_PIXEL")
+
+  mask <- qa$bitwiseAnd(63)$eq(0)
+
+  saturation <- img$select("QA_RADSAT")$eq(0)
+
+  img$
+    updateMask(mask)$
+    updateMask(saturation)$
+    select(
+      c(
+        "SR_B2", "SR_B3", "SR_B4",
+        "SR_B5", "SR_B6", "SR_B7"
+      ),
+      c(
+        "blue", "green", "red",
+        "nir", "swir1", "swir2"
+      )
+    )$
+    multiply(0.0000275)$
+    add(-0.2)
+}
+
+
+```
+
+
+```{r}
+
+# =========================================================
+# SECTION 7: TARGET AND EXPANDED SEASONAL WINDOWS
+# =========================================================
+
+library(dplyr)
+library(purrr)
+library(tibble)
+library(readr)
+library(reticulate)
+
+years <- c(2000, 2010, 2020, 2025)
+
+# Original target windows
+windows <- tibble::tribble(
+  ~window,    ~season, ~start_month, ~start_day, ~end_month, ~end_day,
+  "dry_feb",  "Dry",   2,            10,         2,          20,
+  "dry_sep",  "Dry",   9,            15,         9,          25,
+  "wet_may",  "Wet",   5,             5,         5,          30,
+  "wet_dec",  "Wet",  12,             5,        12,          30
+)
+
+# Option B parameters
+buffer_days <- 30
+
+# Coverage criteria for this preliminary assessment
+min_scenes <- 2
+coverage_threshold <- 0.70
+
+# Expand each target window by 30 days at each end.
+# Earth Engine filterDate() uses an exclusive end date.
+window_schedule <- tidyr::crossing(
+  year = years,
+  windows
+) %>%
+  mutate(
+    target_start = as.Date(sprintf(
+      "%04d-%02d-%02d", year, start_month, start_day
+    )),
+    target_end = as.Date(sprintf(
+      "%04d-%02d-%02d", year, end_month, end_day
+    )),
+    expanded_start = target_start - buffer_days,
+    expanded_end = target_end + buffer_days,
+    expanded_end_exclusive = expanded_end + 1,
+    key = paste(year, window, sep = "_")
+  )
+
+print(
+  window_schedule %>%
+    select(
+      year, window, season, target_start, target_end,
+      expanded_start, expanded_end
+    )
+)
+
+```
+
+
+# 8. Create seasonal Landsat composites
+
+Landsat 5 and 7 are used for earlier years; Landsat 8 and 9
+contribute when available for later years. Collections are merged
+after the bands have been standardized.
+
+The end date is exclusive in Earth Engine, so one day is added
+to include the requested final day.
+
+```{r seasonal-composites}
+
+# =========================================================
+# SECTION 8: LANDSAT PREPROCESSING FUNCTIONS
+# =========================================================
+
+mask_scale_l57 <- function(image) {
+
+  qa <- image$select("QA_PIXEL")
+
+  mask <- qa$bitwiseAnd(1)$eq(0)$
+    And(qa$bitwiseAnd(2)$eq(0))$
+    And(qa$bitwiseAnd(8)$eq(0))$
+    And(qa$bitwiseAnd(16)$eq(0))$
+    And(qa$bitwiseAnd(32)$eq(0))
+
+  saturation_mask <- image$select("QA_RADSAT")$eq(0)
+
+  reflectance <- image$select(
+    c("SR_B1", "SR_B2", "SR_B3",
+      "SR_B4", "SR_B5", "SR_B7"),
+    c("blue", "green", "red",
+      "nir", "swir1", "swir2")
+  )$multiply(0.0000275)$add(-0.2)
+
+  processed <- reflectance$
+    updateMask(mask)$
+    updateMask(saturation_mask)
+
+  processed$copyProperties(
+    image,
+    c("system:time_start", "system:index")
+  )
+}
+
+
+mask_scale_l89 <- function(image) {
+
+  qa <- image$select("QA_PIXEL")
+
+  mask <- qa$bitwiseAnd(1)$eq(0)$
+    And(qa$bitwiseAnd(2)$eq(0))$
+    And(qa$bitwiseAnd(4)$eq(0))$
+    And(qa$bitwiseAnd(8)$eq(0))$
+    And(qa$bitwiseAnd(16)$eq(0))$
+    And(qa$bitwiseAnd(32)$eq(0))
+
+  saturation_mask <- image$select("QA_RADSAT")$eq(0)
+
+  reflectance <- image$select(
+    c("SR_B2", "SR_B3", "SR_B4",
+      "SR_B5", "SR_B6", "SR_B7"),
+    c("blue", "green", "red",
+      "nir", "swir1", "swir2")
+  )$multiply(0.0000275)$add(-0.2)
+
+  processed <- reflectance$
+    updateMask(mask)$
+    updateMask(saturation_mask)
+
+  processed$copyProperties(
+    image,
+    c("system:time_start", "system:index")
+  )
+}
+
+```
+
+
+```{r}
+
+# =========================================================
+# SECTION 9: EXPANDED-WINDOW AVAILABILITY AND COVERAGE
+# =========================================================
+
+library(dplyr)
+library(tibble)
+library(readr)
+library(reticulate)
+
+ee <- reticulate::import("ee", convert = FALSE)
+
+# Ensure Earth Engine is initialized.
+ee$Initialize(project = "thinking-leaf-305215")
+
+# Helper: call a Python method explicitly.
+ee_method <- function(object, method, ...) {
+  fn <- reticulate::py_get_attr(object, method)
+  reticulate::py_call(fn, ...)
+}
+
+# Helper: safely retrieve an Earth Engine result.
+ee_get_info <- function(object) {
+  reticulate::py_to_r(
+    ee_method(object, "getInfo")
+  )
+}
+
+# Python callbacks for Earth Engine server-side mapping.
+# These call the preprocessing functions defined in Section 8.
+preprocess_l57_py <- reticulate::py_eval(
+  paste0(
+    "lambda image: image.select(",
+    "['SR_B1','SR_B2','SR_B3','SR_B4','SR_B5','SR_B7'], ",
+    "['blue','green','red','nir','swir1','swir2'])",
+    ".multiply(0.0000275).add(-0.2)",
+    ".updateMask(image.select('QA_PIXEL').bitwiseAnd(1).eq(0)",
+    ".And(image.select('QA_PIXEL').bitwiseAnd(2).eq(0)",
+    ".And(image.select('QA_PIXEL').bitwiseAnd(8).eq(0)",
+    ".And(image.select('QA_PIXEL').bitwiseAnd(16).eq(0)",
+    ".And(image.select('QA_PIXEL').bitwiseAnd(32).eq(0))))))",
+    ".updateMask(image.select('QA_RADSAT').eq(0))",
+    ".copyProperties(image, ['system:time_start','system:index'])"
+  ),
+  convert = FALSE
+)
+
+preprocess_l89_py <- reticulate::py_eval(
+  paste0(
+    "lambda image: image.select(",
+    "['SR_B2','SR_B3','SR_B4','SR_B5','SR_B6','SR_B7'], ",
+    "['blue','green','red','nir','swir1','swir2'])",
+    ".multiply(0.0000275).add(-0.2)",
+    ".updateMask(image.select('QA_PIXEL').bitwiseAnd(1).eq(0)",
+    ".And(image.select('QA_PIXEL').bitwiseAnd(2).eq(0)",
+    ".And(image.select('QA_PIXEL').bitwiseAnd(4).eq(0)",
+    ".And(image.select('QA_PIXEL').bitwiseAnd(8).eq(0)",
+    ".And(image.select('QA_PIXEL').bitwiseAnd(16).eq(0)",
+    ".And(image.select('QA_PIXEL').bitwiseAnd(32).eq(0)))))))",
+    ".updateMask(image.select('QA_RADSAT').eq(0))",
+    ".copyProperties(image, ['system:time_start','system:index'])"
+  ),
+  convert = FALSE
+)
+
+sensor_specs <- list(
+  list(
+    id = "LANDSAT/LT05/C02/T1_L2",
+    callback = preprocess_l57_py
+  ),
+  list(
+    id = "LANDSAT/LE07/C02/T1_L2",
+    callback = preprocess_l57_py
+  ),
+  list(
+    id = "LANDSAT/LC08/C02/T1_L2",
+    callback = preprocess_l89_py
+  ),
+  list(
+    id = "LANDSAT/LC09/C02/T1_L2",
+    callback = preprocess_l89_py
+  )
+)
+
+min_scenes <- 2
+coverage_threshold <- 0.70
+
+get_window_result <- function(year, window, target_start,
+                              target_end, expanded_start,
+                              expanded_end_exclusive, key) {
+
+  message("Checking: ", key)
+
+  start_string <- format(expanded_start, "%Y-%m-%d")
+  end_string <- format(expanded_end_exclusive, "%Y-%m-%d")
+
+  scene_count <- 0L
+  dates <- character(0)
+  processed_collections <- list()
+
+  for (sensor in sensor_specs) {
+
+    raw <- ee$ImageCollection(sensor$id)
+    raw <- ee_method(raw, "filterDate", start_string, end_string)
+    raw <- ee_method(raw, "filterBounds", roi)
+
+    n <- tryCatch(
+      as.integer(ee_get_info(ee_method(raw, "size"))),
+      error = function(e) {
+        message("Scene-count error for ", sensor$id, ": ",
+                conditionMessage(e))
+        0L
+      }
+    )
+
+    scene_count <- scene_count + n
+
+    if (n > 0L) {
+
+      # Extract dates from the original collection.
+      date_callback <- reticulate::py_eval(
+        "lambda image: image.set('acq_date', image.date().format('YYYY-MM-dd'))",
+        convert = FALSE
+      )
+
+      dated_raw <- ee_method(raw, "map", date_callback)
+
+      sensor_dates <- tryCatch(
+        ee_get_info(ee_method(dated_raw, "aggregate_array", "acq_date")),
+        error = function(e) {
+          message("Date extraction failed for ", sensor$id, ": ",
+                  conditionMessage(e))
+          character(0)
+        }
+      )
+
+      dates <- c(dates, as.character(unlist(sensor_dates)))
+
+      processed <- ee_method(raw, "map", sensor$callback)
+      processed_collections[[length(processed_collections) + 1L]] <-
+        processed
+    }
+  }
+
+  dates <- sort(unique(dates))
+
+  if (scene_count == 0L || length(processed_collections) == 0L) {
+    return(list(
+      summary = tibble(
+        year = year,
+        window = window,
+        key = key,
+        target_start = as.character(target_start),
+        target_end = as.character(target_end),
+        expanded_start = start_string,
+        expanded_end = as.character(expanded_end_exclusive - 1),
+        scene_count = scene_count,
+        unique_acquisition_dates = length(dates),
+        acquisition_dates = paste(dates, collapse = "; "),
+        valid_pixel_coverage = NA_real_,
+        coverage_status = "no_scenes"
+      ),
+      image = NULL
+    ))
+  }
+
+  # Merge processed collections.
+  merged <- processed_collections[[1]]
+
+  if (length(processed_collections) > 1L) {
+    for (j in 2:length(processed_collections)) {
+      merged <- ee_method(
+        merged, "merge", processed_collections[[j]]
+      )
+    }
+  }
+
+  composite <- ee_method(merged, "median")
+  composite <- ee_method(composite, "clip", roi)
+
+  coverage <- tryCatch({
+
+    valid_mask <- ee_method(composite, "select",
+                            c("blue", "green", "red",
+                              "nir", "swir1", "swir2"))
+    valid_mask <- ee_method(valid_mask, "mask")
+    valid_mask <- ee_method(valid_mask, "reduce", ee$Reducer$min())
+    valid_mask <- ee_method(valid_mask, "rename", "valid")
+
+    coverage_dictionary <- ee_method(
+      valid_mask, "reduceRegion",
+      reducer = ee$Reducer$mean(),
+      geometry = roi,
+      scale = 30,
+      maxPixels = 1e9,
+      bestEffort = TRUE
+    )
+
+    coverage_values <- ee_get_info(coverage_dictionary)
+    value <- coverage_values[["valid"]]
+
+    if (is.null(value)) NA_real_ else as.numeric(value)
+
+  }, error = function(e) {
+    message("Coverage calculation failed for ", key, ": ",
+            conditionMessage(e))
+    NA_real_
+  })
+
+  status <- if (is.na(coverage)) {
+    "coverage_unavailable"
+  } else if (scene_count < min_scenes) {
+    "insufficient_scenes"
+  } else if (coverage < coverage_threshold) {
+    "low_valid_pixel_coverage"
+  } else {
+    "adequate_coverage"
+  }
+
+  list(
+    summary = tibble(
+      year = year,
+      window = window,
+      key = key,
+      target_start = as.character(target_start),
+      target_end = as.character(target_end),
+      expanded_start = start_string,
+      expanded_end = as.character(expanded_end_exclusive - 1),
+      scene_count = scene_count,
+      unique_acquisition_dates = length(dates),
+      acquisition_dates = paste(dates, collapse = "; "),
+      valid_pixel_coverage = coverage,
+      coverage_status = status
+    ),
+    image = composite
+  )
+}
+
+# Run the 16 year-season combinations.
+window_results <- vector("list", nrow(window_schedule))
+names(window_results) <- window_schedule$key
+
+for (i in seq_len(nrow(window_schedule))) {
+
+  w <- window_schedule[i, ]
+
+  window_results[[w$key]] <- get_window_result(
+    year = w$year,
+    window = w$window,
+    target_start = w$target_start,
+    target_end = w$target_end,
+    expanded_start = w$expanded_start,
+    expanded_end_exclusive = w$expanded_end_exclusive,
+    key = w$key
+  )
+}
+
+# Preserve composites for subsequent analysis.
+seasonal_composites <- lapply(window_results, `[[`, "image")
+
+availability_summary <- bind_rows(
+  lapply(window_results, `[[`, "summary")
+) %>%
+  mutate(
+    valid_pixel_coverage_pct =
+      round(100 * valid_pixel_coverage, 1)
+  ) %>%
+  arrange(year, match(window, windows$window))
+
+print(availability_summary, n = Inf)
+
+readr::write_csv(
+  availability_summary,
+  "Tharaka_Landsat_Expanded_Window_Summary.csv"
+)
+
+readr::write_csv(
+  availability_summary %>%
+    select(
+      year, window, target_start, target_end,
+      expanded_start, expanded_end,
+      scene_count, unique_acquisition_dates,
+      acquisition_dates, coverage_status
+    ),
+  "Tharaka_Landsat_Acquisition_Dates.csv"
+)
+
+
+```
+
+
+```{r}
+
+# =========================================================
+# EXPORT REPORTS WITHOUT REQUERYING EARTH ENGINE
+# =========================================================
+
+# Convert to a plain R tibble to remove any Python-backed values.
+availability_summary_r <- as.data.frame(availability_summary)
+
+# Export the full summary.
+readr::write_csv(
+  availability_summary_r,
+  "Tharaka_Landsat_Expanded_Window_Summary.csv"
+)
+
+# Export the acquisition-date report.
+acquisition_date_report <- availability_summary_r[
+  ,
+  c(
+    "year", "window", "target_start", "target_end",
+    "expanded_start", "expanded_end",
+    "scene_count", "unique_acquisition_dates",
+    "acquisition_dates", "coverage_status"
+  ),
+  drop = FALSE
+]
+
+readr::write_csv(
+  acquisition_date_report,
+  "Tharaka_Landsat_Acquisition_Dates.csv"
+)
+
+cat("Export completed.\n")
+cat("Summary rows:", nrow(availability_summary_r), "\n")
+cat("Acquisition report rows:", nrow(acquisition_date_report), "\n")
+
+```
+
+```{r}
+# =========================================================
+# DIAGNOSTIC: CHECK LANDSAT AVAILABILITY
+# =========================================================
+
+ee <- reticulate::import("ee", convert = FALSE)
+
+check_landsat <- function(collection_id, start_date, end_date, roi) {
+
+  collection <- ee$ImageCollection(collection_id)$
+    filterDate(start_date, end_date)$
+    filterBounds(roi)
+
+  count <- reticulate::py_to_r(
+    collection$size()$getInfo()
+  )
+
+  data.frame(
+    collection = collection_id,
+    start_date = start_date,
+    end_date = end_date,
+    scenes = as.integer(count)
+  )
+}
+
+tests <- dplyr::bind_rows(
+  check_landsat(
+    "LANDSAT/LT05/C02/T1_L2",
+    "2000-02-10", "2000-02-21", roi
+  ),
+  check_landsat(
+    "LANDSAT/LE07/C02/T1_L2",
+    "2000-02-10", "2000-02-21", roi
+  ),
+  check_landsat(
+    "LANDSAT/LT05/C02/T1_L2",
+    "2010-02-10", "2010-02-21", roi
+  ),
+  check_landsat(
+    "LANDSAT/LE07/C02/T1_L2",
+    "2010-02-10", "2010-02-21", roi
+  )
+)
+
+print(tests)
+```
+
+# 9. Check scene availability
+
+```{r scene-summary}
+# =========================================================
+# 10. SUMMARIZE DATA AVAILABILITY
+# =========================================================
+
+scene_summary %>%
+  arrange(year, window) %>%
+  print(n = Inf)
+
+ggplot(
+  scene_summary,
+  aes(
+    x = factor(year),
+    y = scenes,
+    fill = window
+  )
+) +
+  geom_col(position = "dodge") +
+  labs(
+    title = "Landsat Scene Availability by Year and Window",
+    x = "Year",
+    y = "Number of scenes returned",
+    fill = "Observation window"
+  ) +
+  theme_minimal()
+
+ggsave(
+  "02_outputs/figures/landsat_scene_availability.png",
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+if (any(scene_summary$scenes == 0)) {
+  warning(
+    "Some year-window combinations returned no scenes. ",
+    "Inspect these before continuing."
+  )
+}
+```
+
+# 10. Inspect a composite interactively
+
+The following code is for an interactive RStudio session.
+It is not evaluated when knitting the PDF because the Earth Engine
+Map widget is intended for interactive inspection.
+
+```{r inspect-composite, eval=FALSE}
+# =========================================================
+# 11. INTERACTIVE VISUAL INSPECTION
+# =========================================================
+
+test_image <- seasonal_composites[["2025_wet_may"]]
+
+if (!is.null(test_image)) {
+
+  Map$centerObject(roi, 10)
+
+  Map$addLayer(
+    test_image,
+    list(
+      bands = c("swir1", "nir", "red"),
+      min = 0,
+      max = 0.4
+    ),
+    "Tharaka May 2025"
+  )
+
+  Map
+}
+```
+
+# 11. Next analytical stage
+
+The outputs from this script are seasonal surface-reflectance
+composites and a scene-availability table.
+
+The next stage will require representative training polygons or
+points for the four classes:
+
+1. Grassland
+2. Bushland
+3. Cultivated farmland
+4. Settlement
+
+A supervised classifier, such as Random Forest, can then be trained
+and assessed using independent validation samples. We will calculate
+class areas in square kilometres and percentages, produce accuracy
+metrics, and quantify changes between 2000, 2010, 2020 and 2025.
+
+No land-cover area estimates should be reported until classification
+and accuracy assessment have been completed.
