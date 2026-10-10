@@ -9,7 +9,9 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-rm(list=ls())
+# R Markdown evaluates this document in its own environment.
+# Do not clear objects here; doing so can destroy prerequisites when chunks
+# are run interactively in RStudio.
 
 knitr::opts_chunk$set(
   echo = TRUE,
@@ -499,7 +501,6 @@ mask_scale_l89 <- function(image) {
 
 
 ```{r}
-
 # =========================================================
 # SECTION 9: EXPANDED-WINDOW AVAILABILITY AND COVERAGE
 # =========================================================
@@ -736,54 +737,240 @@ get_window_result <- function(year, window, target_start,
     image = composite
   )
 }
+```
 
-# Run the 16 year-season combinations.
-window_results <- vector("list", nrow(window_schedule))
-names(window_results) <- window_schedule$key
+
+```{r}
+
+# =========================================================
+# SECTION 9B: RESUMABLE WINDOW PROCESSING AND SAFE EXTRACTION
+# =========================================================
+
+# Remove any R-level time limit that might interrupt processing.
+setTimeLimit(
+  cpu = Inf,
+  elapsed = Inf,
+  transient = FALSE
+)
+
+# ---------------------------------------------------------
+# 1. Initialize or reuse existing results
+# ---------------------------------------------------------
+
+expected_keys <- as.character(window_schedule$key)
+
+if (
+  !exists("window_results", inherits = FALSE) ||
+  !is.list(window_results) ||
+  !identical(names(window_results), expected_keys)
+) {
+  window_results <- setNames(
+    vector("list", length(expected_keys)),
+    expected_keys
+  )
+} else {
+  message("Reusing existing window_results.")
+}
+
+# Create the composite registry BEFORE processing. Each successful image is
+# registered immediately below, so a later-window problem cannot prevent the
+# earlier composites from being available to later sections.
+# NOTE: RStudio may print `reached elapsed time limit` from
+# .Call(`_reticulate_py_str_impl`, x) while its Environment pane tries to
+# summarise an Earth Engine Python proxy. That IDE inspection warning does
+# not by itself prove the assignment failed; use the checks below to confirm.
+seasonal_composites <- setNames(
+  vector("list", length(expected_keys)),
+  expected_keys
+)
+
+# Output files: save checkpoints after each window
+availability_file <- "Tharaka_Landsat_Expanded_Window_Summary.csv"
+
+dates_file <- "Tharaka_Landsat_Acquisition_Dates.csv"
+
+# ---------------------------------------------------------
+# 2. Helper to save all completed summaries
+# ---------------------------------------------------------
+
+save_availability_outputs <- function(results) {
+
+  valid_results <- Filter(
+    function(x) {
+      is.list(x) &&
+        !is.null(x$summary)
+    },
+    results
+  )
+
+  if (length(valid_results) == 0L) {
+    return(invisible(NULL))
+  }
+
+  availability_summary <- dplyr::bind_rows(
+    lapply(valid_results, function(x) x$summary)
+  ) %>%
+    mutate(
+      valid_pixel_coverage_pct =
+        round(100 * valid_pixel_coverage, 1)
+    ) %>%
+    arrange(
+      year,
+      match(
+        window,
+        c("dry_feb", "dry_sep", "wet_may", "wet_dec")
+      )
+    )
+
+  readr::write_csv(
+    availability_summary,
+    availability_file
+  )
+
+  readr::write_csv(
+    availability_summary %>%
+      select(
+        year, window, target_start, target_end,
+        expanded_start, expanded_end,
+        scene_count, unique_acquisition_dates,
+        acquisition_dates, coverage_status
+      ),
+    dates_file
+  )
+
+  invisible(availability_summary)
+}
+
+# ---------------------------------------------------------
+# 3. Process only missing or previously failed windows
+# ---------------------------------------------------------
 
 for (i in seq_len(nrow(window_schedule))) {
 
   w <- window_schedule[i, ]
+  key <- as.character(w$key)
 
-  window_results[[w$key]] <- get_window_result(
-    year = w$year,
-    window = w$window,
-    target_start = w$target_start,
-    target_end = w$target_end,
-    expanded_start = w$expanded_start,
-    expanded_end_exclusive = w$expanded_end_exclusive,
-    key = w$key
+  previous <- window_results[[key]]
+
+  already_completed <-
+    is.list(previous) &&
+    !is.null(previous$summary) &&
+    !identical(
+      as.character(previous$summary$coverage_status[1]),
+      "processing_error"
+    )
+
+  if (already_completed) {
+    # Restore the image into the registry when re-running this chunk in an
+    # existing R session.
+    seasonal_composites[[key]] <- previous[["image"]]
+    message("Skipping completed window: ", key)
+    next
+  }
+
+  message("\nProcessing window: ", key)
+
+  result <- tryCatch(
+    get_window_result(
+      year = w$year,
+      window = w$window,
+      target_start = w$target_start,
+      target_end = w$target_end,
+      expanded_start = w$expanded_start,
+      expanded_end_exclusive = w$expanded_end_exclusive,
+      key = key
+    ),
+    error = function(e) {
+
+      message(
+        "Window failed: ", key,
+        " | ", conditionMessage(e)
+      )
+
+      list(
+        summary = tibble(
+          year = w$year,
+          window = w$window,
+          key = key,
+          target_start = as.character(w$target_start),
+          target_end = as.character(w$target_end),
+          expanded_start = as.character(w$expanded_start),
+          expanded_end = as.character(
+            w$expanded_end_exclusive - 1
+          ),
+          scene_count = NA_integer_,
+          unique_acquisition_dates = NA_integer_,
+          acquisition_dates = NA_character_,
+          valid_pixel_coverage = NA_real_,
+          coverage_status = "processing_error"
+        ),
+        image = NULL
+      )
+    }
+  )
+
+  # Retain the result and register its Earth Engine image immediately.
+  # The image remains a server-side Earth Engine object; no raster download
+  # or Python-to-R conversion is performed here.
+  window_results[[key]] <- result
+  seasonal_composites[[key]] <- result[["image"]]
+
+  # Save progress even if a later window fails.
+  save_availability_outputs(window_results)
+
+  gc(verbose = FALSE)
+}
+
+# ---------------------------------------------------------
+# 4. Validate the registry without printing Python-backed objects
+# ---------------------------------------------------------
+
+# Populate any missing registry entries from completed checkpoint results.
+# This supports resuming the chunk after an interrupted RStudio session.
+for (key in expected_keys) {
+  if (is.null(seasonal_composites[[key]])) {
+    result <- window_results[[key]]
+    if (is.list(result) && "image" %in% names(result)) {
+      seasonal_composites[[key]] <- result[["image"]]
+    }
+  }
+}
+
+# ---------------------------------------------------------
+# 5. Final summary and checks
+# ---------------------------------------------------------
+
+availability_summary <- save_availability_outputs(
+  window_results
+)
+
+cat("\n===== PROCESSING STATUS =====\n")
+
+if (!is.null(availability_summary)) {
+  print(
+    availability_summary %>%
+      select(
+        year, window, scene_count,
+        valid_pixel_coverage_pct, coverage_status
+      ),
+    n = Inf
   )
 }
 
-# Preserve composites for subsequent analysis.
-seasonal_composites <- lapply(window_results, `[[`, "image")
-
-availability_summary <- bind_rows(
-  lapply(window_results, `[[`, "summary")
-) %>%
-  mutate(
-    valid_pixel_coverage_pct =
-      round(100 * valid_pixel_coverage, 1)
-  ) %>%
-  arrange(year, match(window, windows$window))
-
-print(availability_summary, n = Inf)
-
-readr::write_csv(
-  availability_summary,
-  "Tharaka_Landsat_Expanded_Window_Summary.csv"
+cat(
+  "\nComposite images retained:",
+  sum(!vapply(seasonal_composites, is.null, logical(1))),
+  "of", length(seasonal_composites), "\n"
 )
 
-readr::write_csv(
-  availability_summary %>%
-    select(
-      year, window, target_start, target_end,
-      expanded_start, expanded_end,
-      scene_count, unique_acquisition_dates,
-      acquisition_dates, coverage_status
-    ),
-  "Tharaka_Landsat_Acquisition_Dates.csv"
+cat(
+  "Availability summary:",
+  normalizePath(availability_file, mustWork = FALSE), "\n"
+)
+
+cat(
+  "Acquisition dates:",
+  normalizePath(dates_file, mustWork = FALSE), "\n"
 )
 
 
@@ -827,7 +1014,6 @@ cat("Summary rows:", nrow(availability_summary_r), "\n")
 cat("Acquisition report rows:", nrow(acquisition_date_report), "\n")
 
 ```
-
 
 # 9. Check scene availability
 
@@ -1001,13 +1187,15 @@ readr::write_csv(
 
 ```
 
-# 10. Inspect a composite interactively
+# 10. Optional target-window composite analysis
 
-The following code is for an interactive RStudio session.
-It is not evaluated when knitting the PDF because the Earth Engine
-Map widget is intended for interactive inspection.
+The optional chunk below rebuilds composites using only acquisitions
+inside the exact target dates and compares them with the expanded-window
+results. It is disabled by default because it issues additional Earth
+Engine queries for the 16 windows. Section 12 uses the expanded-window
+composites created in Section 9B and does not depend on this optional chunk.
 
-```{r inspect-composite, eval=FALSE}
+```{r target-window-selection-optional, eval=FALSE}
 
 # =========================================================
 # SECTION 11: TARGET COMPOSITES AND FINAL DATA SELECTION
@@ -1233,122 +1421,449 @@ readr::write_csv(
 
 ```{r}
 
+
 # =========================================================
-# SECTION 12: FINALISE PROVISIONAL COMPOSITE SELECTION
+# SECTION 12: FINAL COMPOSITE SELECTION AND VALIDATION
+# Tharaka Sub-County Land-Cover Analysis
 # =========================================================
 
 library(dplyr)
 library(readr)
+library(tibble)
 
-selected_composites <- vector(
-  "list",
-  nrow(selection_table)
+# Remove any R-level time limit that could interrupt processing
+setTimeLimit(
+  cpu = Inf,
+  elapsed = Inf,
+  transient = FALSE
 )
-names(selected_composites) <- selection_table$key
 
-final_selection <- selection_table %>%
+# ---------------------------------------------------------
+# 12.1. Validate required objects
+# ---------------------------------------------------------
+
+# Recovery path: if a prior run built window_results but stopped before the
+# composite registry was assembled, rebuild the registry from those results.
+# This does not rerun Earth Engine queries.
+if (
+  !exists("seasonal_composites", inherits = TRUE) &&
+  exists("window_results", inherits = TRUE) &&
+  is.list(window_results)
+) {
+  seasonal_composites <- setNames(
+    lapply(window_results, function(result) {
+      if (is.list(result) && "image" %in% names(result)) {
+        result[["image"]]
+      } else {
+        NULL
+      }
+    }),
+    names(window_results)
+  )
+}
+
+required_objects <- c(
+  "window_schedule",
+  "availability_summary",
+  "seasonal_composites"
+)
+
+missing_objects <- required_objects[
+  !vapply(
+    required_objects,
+    exists,
+    logical(1),
+    inherits = TRUE
+  )
+]
+
+if (length(missing_objects) > 0L) {
+  stop(
+    "Section 12 cannot proceed because these prerequisites are missing: ",
+    paste(missing_objects, collapse = ", "),
+    ". Run the document from the beginning through Section 9B. " ,
+    "Do not execute Section 12 by itself in a fresh R session."
+  )
+}
+
+# Confirm that the schedule and composites have matching keys
+expected_keys <- as.character(window_schedule$key)
+composite_keys <- names(seasonal_composites)
+
+if (is.null(composite_keys)) {
+  stop("seasonal_composites must be a named list.")
+}
+
+missing_composites <- setdiff(expected_keys, composite_keys)
+
+if (length(missing_composites) > 0L) {
+  stop(
+    "Missing composite keys: ",
+    paste(missing_composites, collapse = ", ")
+  )
+}
+
+# Check which composites contain live Earth Engine images
+image_available <- vapply(
+  expected_keys,
+  function(k) {
+    !is.null(seasonal_composites[[k]])
+  },
+  logical(1)
+)
+
+composite_status <- tibble(
+  key = expected_keys,
+  image_available = image_available
+)
+
+print(composite_status, n = Inf)
+
+if (!all(image_available)) {
+  stop(
+    "Some seasonal composites are unavailable. ",
+    "Review composite_status before proceeding."
+  )
+}
+
+cat(
+  "\nSection 12 prerequisites passed:",
+  sum(image_available),
+  "of",
+  length(expected_keys),
+  "composites available.\n"
+)
+
+# ---------------------------------------------------------
+# 12.2. Define output directory
+# ---------------------------------------------------------
+
+plot_dir <- "Tharaka_Landsat_Enhanced_Maps"
+
+if (!dir.exists(plot_dir)) {
+  dir.create(
+    plot_dir,
+    recursive = TRUE,
+    showWarnings = FALSE
+  )
+}
+
+# ---------------------------------------------------------
+# 12.3. Validate schedule and availability keys
+# ---------------------------------------------------------
+
+required_schedule_columns <- c(
+  "year", "window", "season", "key",
+  "target_start", "target_end",
+  "expanded_start", "expanded_end"
+)
+
+required_availability_columns <- c(
+  "key", "scene_count",
+  "valid_pixel_coverage_pct",
+  "coverage_status"
+)
+
+missing_schedule_columns <- setdiff(
+  required_schedule_columns,
+  names(window_schedule)
+)
+
+missing_availability_columns <- setdiff(
+  required_availability_columns,
+  names(availability_summary)
+)
+
+if (length(missing_schedule_columns) > 0) {
+  stop(
+    "Missing columns in window_schedule: ",
+    paste(missing_schedule_columns, collapse = ", ")
+  )
+}
+
+if (length(missing_availability_columns) > 0) {
+  stop(
+    "Missing columns in availability_summary: ",
+    paste(missing_availability_columns, collapse = ", ")
+  )
+}
+
+if (anyDuplicated(window_schedule$key)) {
+  stop("Duplicate keys detected in window_schedule.")
+}
+
+if (anyDuplicated(availability_summary$key)) {
+  stop("Duplicate keys detected in availability_summary.")
+}
+
+if (nrow(window_schedule) != 16) {
+  stop(
+    "Expected 16 year-window combinations, found ",
+    nrow(window_schedule), "."
+  )
+}
+
+# ---------------------------------------------------------
+# 12.4. Rebuild clean source tables
+# Avoid .x and .y duplicate columns
+# ---------------------------------------------------------
+
+schedule_clean <- window_schedule %>%
+  select(all_of(required_schedule_columns))
+
+availability_clean <- availability_summary %>%
+  select(all_of(required_availability_columns))
+
+# Confirm every scheduled window has availability metadata
+missing_availability_keys <- setdiff(
+  schedule_clean$key,
+  availability_clean$key
+)
+
+if (length(missing_availability_keys) > 0) {
+  stop(
+    "Availability information is missing for: ",
+    paste(missing_availability_keys, collapse = ", ")
+  )
+}
+
+# ---------------------------------------------------------
+# 12.5. Match existing Earth Engine composites
+# IMPORTANT: use seasonal_composites directly
+# ---------------------------------------------------------
+
+composite_keys <- names(seasonal_composites)
+
+if (is.null(composite_keys)) {
+  stop(
+    "seasonal_composites must be a named list ",
+    "with window keys as names."
+  )
+}
+
+image_available <- vapply(
+  schedule_clean$key,
+  function(k) {
+    if (!k %in% composite_keys) {
+      return(FALSE)
+    }
+
+    !is.null(seasonal_composites[[k]])
+  },
+  logical(1)
+)
+
+# ---------------------------------------------------------
+# 12.6. Construct the final selection manifest
+# ---------------------------------------------------------
+
+final_selection <- schedule_clean %>%
+  left_join(
+    availability_clean,
+    by = "key"
+  ) %>%
   mutate(
-    selected_source = case_when(
-      target_scene_count_rechecked >= 2 &
-        !is.na(target_fixed_coverage) &
-        target_fixed_coverage >= coverage_threshold ~
-        "target_window",
+    image_available = image_available,
 
-      !is.na(expanded_coverage_original) &
-        expanded_coverage_original >= coverage_threshold ~
-        "expanded_window_fallback",
-
-      TRUE ~ "manual_review_required"
+    selected_source = if_else(
+      image_available,
+      "expanded_window_composite",
+      "none"
     ),
 
     selection_status = case_when(
-      selected_source == "target_window" ~
-        "provisional_target_composite",
+      !image_available ~ "image_unavailable",
 
-      selected_source == "expanded_window_fallback" ~
-        "provisional_buffer_fallback",
+      is.na(scene_count) | scene_count < 1 ~
+        "review_required_no_scenes",
 
-      TRUE ~
-        "not_selected"
+      is.na(valid_pixel_coverage_pct) ~
+        "review_required_missing_coverage",
+
+      is.na(coverage_status) |
+        coverage_status != "adequate_coverage" ~
+        "review_required_coverage",
+
+      TRUE ~ "provisional_expanded_composite"
     ),
 
-    selection_notes = case_when(
-      selected_source == "target_window" &
-        target_scene_count_rechecked <= 2 ~
-        "Target dates retained; limited scene count; inspect imagery",
-
-      selected_source == "target_window" ~
-        "Target-date composite passes preliminary coverage screening",
-
-      selected_source == "expanded_window_fallback" &
-        target_scene_count_rechecked == 0 ~
-        "No target-date scenes; expanded dates used provisionally",
-
-      selected_source == "expanded_window_fallback" ~
-        "Target composite has low coverage; expanded alternative requires review",
-
-      TRUE ~
-        "No suitable composite under current screening rules"
+    selection_notes = paste(
+      "Uses the expanded date window;",
+      "not restricted to the exact target dates.",
+      "Spatial coverage does not establish",
+      "land-cover classification accuracy."
     )
   )
 
-# Select the matching image for each year-season combination.
-for (i in seq_len(nrow(final_selection))) {
+# The subsequent QC, mapping and spectral sections use selected_composites.
+# At this stage the workflow selects available expanded-window composites;
+# the status columns continue to flag composites requiring manual review.
+selected_keys <- final_selection$key[final_selection$image_available]
+selected_composites <- seasonal_composites[selected_keys]
 
-  key <- final_selection$key[i]
-  source <- final_selection$selected_source[i]
+# ---------------------------------------------------------
+# 12.7. Run validation checks
+# ---------------------------------------------------------
 
-  if (source == "target_window") {
-    selected_composites[[key]] <- target_composites[[key]]
+stopifnot(
+  nrow(final_selection) == 16,
+  !anyDuplicated(final_selection$key),
+  all(final_selection$key %in% schedule_clean$key),
+  setequal(final_selection$key, schedule_clean$key)
+)
 
-  } else if (source == "expanded_window_fallback") {
-    selected_composites[[key]] <- seasonal_composites[[key]]
+# Report image availability
+n_images_available <- sum(
+  final_selection$image_available,
+  na.rm = TRUE
+)
 
-  } else {
-    selected_composites[[key]] <- NULL
-  }
-}
+cat(
+  "\nCOMPOSITE SELECTION VALIDATION\n",
+  "----------------------------------------\n",
+  "Scheduled windows: ", nrow(final_selection), "\n",
+  "Images available:  ", n_images_available, "\n",
+  "Images missing:    ",
+  sum(!final_selection$image_available), "\n",
+  "Unique window keys: ",
+  dplyr::n_distinct(final_selection$key), "\n",
+  sep = ""
+)
 
-# Summarise the provisional decisions.
+# ---------------------------------------------------------
+# 12.8. Print the complete selection manifest
+# ---------------------------------------------------------
+
 print(
   final_selection %>%
     select(
-      year, window,
-      target_scene_count_rechecked,
-      target_fixed_coverage_pct,
-      expanded_scene_count,
-      expanded_coverage_original_pct,
+      year, window, key,
+      target_start, target_end,
+      expanded_start, expanded_end,
+      scene_count,
+      valid_pixel_coverage_pct,
+      coverage_status,
       selected_source,
       selection_status,
-      selection_notes
-    ),
+      image_available
+    ) %>%
+    arrange(year, window),
   n = Inf,
   width = Inf
 )
 
-# Export the full selection manifest.
-readr::write_csv(
-  final_selection,
+# ---------------------------------------------------------
+# 12.9. Save the manifest
+# ---------------------------------------------------------
+
+manifest_file <- file.path(
+  plot_dir,
   "Tharaka_Landsat_Final_Selection_Manifest.csv"
 )
 
-cat(
-  "\nSelected target composites:",
-  sum(final_selection$selected_source == "target_window"),
-  "\n"
+write.csv(
+  final_selection,
+  manifest_file,
+  row.names = FALSE,
+  na = ""
 )
 
-cat(
-  "Expanded-window fallbacks:",
-  sum(final_selection$selected_source == "expanded_window_fallback"),
-  "\n"
+# ---------------------------------------------------------
+# 12.10. Save a diagnostic summary
+# ---------------------------------------------------------
+
+selection_summary <- final_selection %>%
+  group_by(
+    year,
+    selection_status,
+    coverage_status
+  ) %>%
+  summarise(
+    number_of_windows = n(),
+
+    images_available = sum(
+      image_available,
+      na.rm = TRUE
+    ),
+
+    minimum_coverage_pct = if (
+      all(is.na(valid_pixel_coverage_pct))
+    ) {
+      NA_real_
+    } else {
+      min(
+        valid_pixel_coverage_pct,
+        na.rm = TRUE
+      )
+    },
+
+    maximum_coverage_pct = if (
+      all(is.na(valid_pixel_coverage_pct))
+    ) {
+      NA_real_
+    } else {
+      max(
+        valid_pixel_coverage_pct,
+        na.rm = TRUE
+      )
+    },
+
+    .groups = "drop"
+  )
+
+summary_file <- file.path(
+  plot_dir,
+  "Tharaka_Landsat_Selection_Diagnostic_Summary.csv"
 )
 
-cat(
-  "Windows requiring manual review:",
-  sum(final_selection$selected_source == "manual_review_required"),
-  "\n"
+write.csv(
+  selection_summary,
+  summary_file,
+  row.names = FALSE,
+  na = ""
 )
+
+# ---------------------------------------------------------
+# 12.11. Final confirmation
+# ---------------------------------------------------------
+
+cat(
+  "\nSECTION 12 COMPLETED\n",
+  "----------------------------------------\n",
+  "Manifest: ",
+  normalizePath(
+    manifest_file,
+    winslash = "/",
+    mustWork = TRUE
+  ), "\n",
+  "Diagnostic summary: ",
+  normalizePath(
+    summary_file,
+    winslash = "/",
+    mustWork = TRUE
+  ), "\n",
+  "----------------------------------------\n",
+  sep = ""
+)
+
+if (
+  all(final_selection$image_available) &&
+  all(
+    final_selection$selection_status ==
+      "provisional_expanded_composite"
+  )
+) {
+  message(
+    "SUCCESS: All 16 windows have available ",
+    "expanded-window composites and passed ",
+    "the current coverage-status checks."
+  )
+} else {
+  warning(
+    "Some windows require review. ",
+    "Check selection_status in final_selection."
+  )
+}
 
 ```
 
@@ -4007,6 +4522,446 @@ print(plot_results)
 
 ```
 
+
+```{r section-33-study-area-location-map, message=FALSE, warning=TRUE}
+
+# =========================================================
+# SECTION 33: STUDY-AREA LOCATION MAP
+# Kenya -> Tharaka-Nithi County -> Tharaka study area
+# =========================================================
+
+library(sf)
+library(ggplot2)
+library(geodata)
+library(patchwork)
+
+# ---------------------------------------------------------
+# 1. Create output directories
+# ---------------------------------------------------------
+
+locator_dir <- "Tharaka_Land_Cover_Results"
+
+boundary_dir <- file.path(
+  locator_dir,
+  "Administrative_Boundaries"
+)
+
+plot_dir <- "Tharaka_Landsat_Enhanced_Maps"
+
+dir.create(
+  boundary_dir,
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+dir.create(
+  plot_dir,
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+# ---------------------------------------------------------
+# 2. Load Kenya administrative boundaries
+# ---------------------------------------------------------
+
+message("Loading Kenya administrative boundaries...")
+
+kenya_counties <- sf::st_as_sf(
+  geodata::gadm(
+    country = "KEN",
+    level = 1,
+    path = boundary_dir
+  )
+)
+
+kenya_country <- sf::st_as_sf(
+  geodata::gadm(
+    country = "KEN",
+    level = 0,
+    path = boundary_dir
+  )
+)
+
+stopifnot(
+  nrow(kenya_counties) > 0,
+  "NAME_1" %in% names(kenya_counties)
+)
+
+# ---------------------------------------------------------
+# 3. Select Tharaka-Nithi County
+# ---------------------------------------------------------
+
+county <- kenya_counties[
+  grepl(
+    "tharaka",
+    kenya_counties$NAME_1,
+    ignore.case = TRUE
+  ) &
+    grepl(
+      "nithi",
+      kenya_counties$NAME_1,
+      ignore.case = TRUE
+    ),
+]
+
+if (nrow(county) != 1) {
+  stop(
+    "Expected exactly one Tharaka-Nithi County feature; found ",
+    nrow(county),
+    ". Check unique(kenya_counties$NAME_1)."
+  )
+}
+
+message("Selected county: ", county$NAME_1)
+
+# ---------------------------------------------------------
+# 4. Recover the Tharaka study-area boundary
+#
+# Prefer the existing study_area_sf or study_area object.
+# If neither is available, reconstruct it from GADM level 2.
+# No Earth Engine query is needed for this location map.
+# ---------------------------------------------------------
+
+if (exists("study_area_sf", inherits = TRUE)) {
+
+  roi_sf <- get("study_area_sf", inherits = TRUE)
+
+  if (!inherits(roi_sf, "sf")) {
+    roi_sf <- sf::st_as_sf(roi_sf)
+  }
+
+} else if (exists("study_area", inherits = TRUE)) {
+
+  roi_sf <- sf::st_as_sf(
+    get("study_area", inherits = TRUE)
+  )
+
+} else {
+
+  message("Recovering Tharaka boundary from GADM level 2...")
+
+  kenya_adm2 <- sf::st_as_sf(
+    geodata::gadm(
+      country = "KEN",
+      level = 2,
+      path = boundary_dir
+    )
+  )
+
+  roi_sf <- kenya_adm2[
+    kenya_adm2$NAME_2 == "Tharaka" &
+      kenya_adm2$NAME_1 == "Tharaka-Nithi",
+  ]
+
+  if (nrow(roi_sf) != 1) {
+    stop(
+      "Could not identify exactly one Tharaka study-area polygon."
+    )
+  }
+}
+
+# ---------------------------------------------------------
+# 5. Standardize and validate geometries
+# ---------------------------------------------------------
+
+kenya_counties <- sf::st_transform(
+  kenya_counties, 4326
+)
+
+kenya_country <- sf::st_transform(
+  kenya_country, 4326
+)
+
+county <- sf::st_transform(
+  county, 4326
+)
+
+roi_sf <- sf::st_transform(
+  roi_sf, 4326
+)
+
+roi_sf <- sf::st_make_valid(roi_sf)
+
+if (nrow(roi_sf) == 0 ||
+    any(sf::st_is_empty(roi_sf))) {
+  stop("The Tharaka study-area geometry is empty.")
+}
+
+# Retain only polygon components if validity repair
+# has produced a geometry collection.
+geometry_types <- as.character(
+  sf::st_geometry_type(roi_sf)
+)
+
+if (any(geometry_types == "GEOMETRY")) {
+  roi_sf <- sf::st_collection_extract(
+    roi_sf,
+    "POLYGON",
+    warn = FALSE
+  )
+}
+
+if (nrow(roi_sf) == 0 ||
+    !all(sf::st_is_valid(roi_sf))) {
+  stop("The study-area boundary is not a valid polygon.")
+}
+
+message("Study-area geometry validated successfully.")
+
+# Confirm the study area intersects the intended county.
+overlap <- sf::st_intersects(
+  roi_sf,
+  county,
+  sparse = FALSE
+)
+
+if (!all(overlap)) {
+  stop(
+    "The study-area boundary does not intersect ",
+    "Tharaka-Nithi County. Check the selected boundaries."
+  )
+}
+
+# Calculate percentage of the study area inside the county.
+roi_area <- sf::st_transform(roi_sf, 6933)
+county_area <- sf::st_transform(county, 6933)
+
+inside_area <- sf::st_intersection(
+  roi_area,
+  county_area
+)
+
+overlap_pct <- 100 * as.numeric(
+  sum(sf::st_area(inside_area)) /
+    sum(sf::st_area(roi_area))
+)
+
+cat(
+  "Percentage of study area inside Tharaka-Nithi County:",
+  round(overlap_pct, 2), "%\n"
+)
+
+# ---------------------------------------------------------
+# 6. Map 1: Kenya, with county boundaries
+# ---------------------------------------------------------
+
+p_kenya <- ggplot() +
+  geom_sf(
+    data = kenya_country,
+    fill = "#F7F7F7",
+    colour = "#444444",
+    linewidth = 0.35
+  ) +
+  geom_sf(
+    data = kenya_counties,
+    fill = NA,
+    colour = "#B7B7B7",
+    linewidth = 0.2
+  ) +
+  geom_sf(
+    data = county,
+    fill = "#E76F51",
+    colour = "#8C2D04",
+    linewidth = 0.65
+  ) +
+  labs(
+    title = "KENYA",
+    subtitle = "Tharaka-Nithi County highlighted"
+  ) +
+  coord_sf(expand = FALSE) +
+  theme_void(base_size = 11) +
+  theme(
+    plot.title = element_text(
+      face = "bold", hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      hjust = 0.5, size = 9
+    ),
+    panel.border = element_rect(
+      colour = "black",
+      fill = NA,
+      linewidth = 0.7
+    )
+  )
+
+# ---------------------------------------------------------
+# 7. Map 2: Tharaka-Nithi County and study area
+# ---------------------------------------------------------
+
+county_bbox <- sf::st_bbox(county)
+
+county_x <- c(
+  unname(county_bbox["xmin"]) - 0.12,
+  unname(county_bbox["xmax"]) + 0.12
+)
+
+county_y <- c(
+  unname(county_bbox["ymin"]) - 0.08,
+  unname(county_bbox["ymax"]) + 0.08
+)
+
+p_county <- ggplot() +
+  geom_sf(
+    data = county,
+    fill = "#E9E9E9",
+    colour = "#333333",
+    linewidth = 0.8
+  ) +
+  geom_sf(
+    data = roi_sf,
+    fill = "#65A765",
+    colour = "#185C37",
+    linewidth = 0.8
+  ) +
+  labs(
+    title = "THARAKA-NITHI COUNTY",
+    subtitle = "Tharaka study area highlighted"
+  ) +
+  coord_sf(
+    xlim = county_x,
+    ylim = county_y,
+    expand = FALSE
+  ) +
+  theme_void(base_size = 11) +
+  theme(
+    plot.title = element_text(
+      face = "bold", hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      hjust = 0.5, size = 9
+    ),
+    panel.border = element_rect(
+      colour = "black",
+      fill = NA,
+      linewidth = 0.7
+    )
+  )
+
+# ---------------------------------------------------------
+# 8. Map 3: Detailed Tharaka study-area boundary
+# ---------------------------------------------------------
+
+roi_bbox <- sf::st_bbox(roi_sf)
+
+roi_x <- c(
+  unname(roi_bbox["xmin"]) - 0.025,
+  unname(roi_bbox["xmax"]) + 0.025
+)
+
+roi_y <- c(
+  unname(roi_bbox["ymin"]) - 0.025,
+  unname(roi_bbox["ymax"]) + 0.025
+)
+
+p_detail <- ggplot() +
+  geom_sf(
+    data = roi_sf,
+    fill = "#A8D5BA",
+    colour = "#185C37",
+    linewidth = 0.9
+  ) +
+  labs(
+    title = "THARAKA STUDY AREA",
+    subtitle = "Boundary used in the Landsat analysis"
+  ) +
+  coord_sf(
+    xlim = roi_x,
+    ylim = roi_y,
+    expand = FALSE
+  ) +
+  theme_void(base_size = 11) +
+  theme(
+    plot.title = element_text(
+      face = "bold", hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      hjust = 0.5, size = 9
+    ),
+    panel.border = element_rect(
+      colour = "black",
+      fill = NA,
+      linewidth = 0.7
+    )
+  )
+
+# ---------------------------------------------------------
+# 9. Combine the three maps
+# ---------------------------------------------------------
+
+p_locator_0 <- (p_kenya | p_county | p_detail) +
+  plot_layout(widths = c(1, 1, 1.1)) +
+  plot_annotation(
+    title = "Location of the Tharaka Study Area, Kenya",
+    subtitle = paste(
+      "Geographic context for the 2000, 2010, 2020 and 2025",
+      "seasonal Landsat analysis"
+    ),
+    caption = paste(
+      "Administrative boundaries: GADM.",
+      "Study boundary: Tharaka Sub-county."
+    ),
+    theme = theme(
+      plot.title = element_text(
+        size = 17, face = "bold", hjust = 0.5
+      ),
+      plot.subtitle = element_text(
+        size = 11, hjust = 0.5
+      ),
+      plot.caption = element_text(
+        size = 8, hjust = 0
+      )
+    )
+  )
+
+print(p_locator_0)
+
+# ---------------------------------------------------------
+# 10. Export the location map
+# ---------------------------------------------------------
+
+png_file <- file.path(
+  plot_dir,
+  "Tharaka_Study_Area_Location_Map.png"
+)
+
+pdf_file <- file.path(
+  plot_dir,
+  "Tharaka_Study_Area_Location_Map.pdf"
+)
+
+ggsave(
+  filename = png_file,
+  plot = p_locator_0,
+  width = 15,
+  height = 7,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+
+ggsave(
+  filename = pdf_file,
+  plot = p_locator_0,
+  width = 15,
+  height = 7,
+  units = "in",
+  bg = "white"
+)
+
+cat(
+  "\nSECTION 33 COMPLETED\n",
+  "County: ", county$NAME_1, "\n",
+  "Study-area overlap: ", round(overlap_pct, 2), "%\n",
+  "PNG: ", normalizePath(png_file, winslash = "/"), "\n",
+  "PDF: ", normalizePath(pdf_file, winslash = "/"), "\n",
+  sep = ""
+)
+
+
+```
+
+
+
 ```{r}
 # Select Tharaka-Nithi County robustly
 county <- kenya_counties[
@@ -4794,23 +5749,7 @@ cat(
 
 
 
-# 11. Next analytical stage
+```{r}
 
-The outputs from this script are seasonal surface-reflectance
-composites and a scene-availability table.
+```
 
-The next stage will require representative training polygons or
-points for the four classes:
-
-1. Grassland
-2. Bushland
-3. Cultivated farmland
-4. Settlement
-
-A supervised classifier, such as Random Forest, can then be trained
-and assessed using independent validation samples. We will calculate
-class areas in square kilometres and percentages, produce accuracy
-metrics, and quantify changes between 2000, 2010, 2020 and 2025.
-
-No land-cover area estimates should be reported until classification
-and accuracy assessment have been completed.

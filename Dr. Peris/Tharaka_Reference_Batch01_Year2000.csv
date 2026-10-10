@@ -1,7 +1,7 @@
 point_id,longitude,latitude,year,land_cover,confidence,evidence,notes,map_url
 11,38.0901686393205,-0.0745182866514577,2000,NA,NA,NA,NA,"https://www.google.com/maps?q=-0.074518,38.090169"
 34,38.0188159063576,-0.113223307791117,2000,NA,NA,NA,NA,"https://www.google.com/maps?q=-0.113223,38.018816"
-41,37.9445030838813,-0.0610734753287546,2000,NA,NA,NA,NA,"https://www.google.com/maps?q=-0.061073,37.944503"
+41,37.9445030838717,-0.0610734753287546,2000,NA,NA,NA,NA,"https://www.google.com/maps?q=-0.061073,37.944503"
 44,38.1734986147207,-0.149283106021069,2000,NA,NA,NA,NA,"https://www.google.com/maps?q=-0.149283,38.173499"
 78,38.2654595615343,-0.0262012035057513,2000,NA,NA,NA,NA,"https://www.google.com/maps?q=-0.026201,38.265460"
 99,37.9368908726572,-0.285645702997305,2000,NA,NA,NA,NA,"https://www.google.com/maps?q=-0.285646,37.936891"
