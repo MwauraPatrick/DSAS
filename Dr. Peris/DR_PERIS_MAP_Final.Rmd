@@ -828,94 +828,177 @@ cat("Acquisition report rows:", nrow(acquisition_date_report), "\n")
 
 ```
 
-```{r}
-# =========================================================
-# DIAGNOSTIC: CHECK LANDSAT AVAILABILITY
-# =========================================================
-
-ee <- reticulate::import("ee", convert = FALSE)
-
-check_landsat <- function(collection_id, start_date, end_date, roi) {
-
-  collection <- ee$ImageCollection(collection_id)$
-    filterDate(start_date, end_date)$
-    filterBounds(roi)
-
-  count <- reticulate::py_to_r(
-    collection$size()$getInfo()
-  )
-
-  data.frame(
-    collection = collection_id,
-    start_date = start_date,
-    end_date = end_date,
-    scenes = as.integer(count)
-  )
-}
-
-tests <- dplyr::bind_rows(
-  check_landsat(
-    "LANDSAT/LT05/C02/T1_L2",
-    "2000-02-10", "2000-02-21", roi
-  ),
-  check_landsat(
-    "LANDSAT/LE07/C02/T1_L2",
-    "2000-02-10", "2000-02-21", roi
-  ),
-  check_landsat(
-    "LANDSAT/LT05/C02/T1_L2",
-    "2010-02-10", "2010-02-21", roi
-  ),
-  check_landsat(
-    "LANDSAT/LE07/C02/T1_L2",
-    "2010-02-10", "2010-02-21", roi
-  )
-)
-
-print(tests)
-```
 
 # 9. Check scene availability
 
 ```{r scene-summary}
+
 # =========================================================
-# 10. SUMMARIZE DATA AVAILABILITY
+# SECTION 10: VALIDATE ORIGINAL TARGET WINDOWS
 # =========================================================
 
-scene_summary %>%
-  arrange(year, window) %>%
-  print(n = Inf)
+library(dplyr)
+library(tibble)
+library(readr)
 
-ggplot(
-  scene_summary,
-  aes(
-    x = factor(year),
-    y = scenes,
-    fill = window
-  )
-) +
-  geom_col(position = "dodge") +
-  labs(
-    title = "Landsat Scene Availability by Year and Window",
-    x = "Year",
-    y = "Number of scenes returned",
-    fill = "Observation window"
-  ) +
-  theme_minimal()
-
-ggsave(
-  "02_outputs/figures/landsat_scene_availability.png",
-  width = 10,
-  height = 6,
-  dpi = 300
+# Server-side callback to attach a readable acquisition date.
+date_callback <- reticulate::py_eval(
+  "lambda image: image.set('acq_date', image.date().format('YYYY-MM-dd'))",
+  convert = FALSE
 )
 
-if (any(scene_summary$scenes == 0)) {
-  warning(
-    "Some year-window combinations returned no scenes. ",
-    "Inspect these before continuing."
+validate_one_window <- function(w) {
+
+  message("Validating target window: ", w$key)
+
+  target_start <- as.character(w$target_start)
+  target_end_exclusive <- as.character(w$target_end + 1)
+
+  target_scene_count <- 0L
+  target_dates <- character(0)
+
+  # Count and list acquisitions inside the ORIGINAL target dates.
+  for (sensor in sensor_specs) {
+
+    raw <- ee$ImageCollection(sensor$id)
+    raw <- ee_method(
+      raw, "filterDate",
+      target_start, target_end_exclusive
+    )
+    raw <- ee_method(raw, "filterBounds", roi)
+
+    n <- tryCatch(
+      as.integer(ee_get_info(ee_method(raw, "size"))),
+      error = function(e) {
+        message("Target scene count failed for ",
+                sensor$id, ": ", conditionMessage(e))
+        0L
+      }
+    )
+
+    target_scene_count <- target_scene_count + n
+
+    if (n > 0L) {
+      dated_raw <- ee_method(raw, "map", date_callback)
+
+      dates_sensor <- tryCatch(
+        ee_get_info(
+          ee_method(dated_raw, "aggregate_array", "acq_date")
+        ),
+        error = function(e) {
+          message("Target date extraction failed for ",
+                  sensor$id, ": ", conditionMessage(e))
+          character(0)
+        }
+      )
+
+      target_dates <- c(
+        target_dates,
+        as.character(unlist(dates_sensor))
+      )
+    }
+  }
+
+  target_dates <- sort(unique(target_dates))
+
+  # Recalculate coverage for the existing expanded-window composite
+  # at a fixed 30 m scale, without bestEffort.
+  composite <- seasonal_composites[[w$key]]
+
+  fixed_scale_coverage <- tryCatch({
+
+    if (is.null(composite)) {
+      stop("No expanded-window composite is available.")
+    }
+
+    valid_mask <- ee_method(
+      composite, "select",
+      c("blue", "green", "red", "nir", "swir1", "swir2")
+    )
+
+    valid_mask <- ee_method(valid_mask, "mask")
+    valid_mask <- ee_method(valid_mask, "reduce", ee$Reducer$min())
+    valid_mask <- ee_method(valid_mask, "rename", "valid")
+
+    coverage_dictionary <- ee_method(
+      valid_mask, "reduceRegion",
+      reducer = ee$Reducer$mean(),
+      geometry = roi,
+      scale = 30,
+      maxPixels = 1e10,
+      tileScale = 4
+    )
+
+    coverage_values <- ee_get_info(coverage_dictionary)
+    coverage_value <- coverage_values[["valid"]]
+
+    if (is.null(coverage_value)) {
+      NA_real_
+    } else {
+      as.numeric(coverage_value)
+    }
+
+  }, error = function(e) {
+    message("Fixed-scale coverage failed for ", w$key, ": ",
+            conditionMessage(e))
+    NA_real_
+  })
+
+  target_status <- if (target_scene_count == 0L) {
+    "buffer_only_no_target_scenes"
+  } else {
+    "target_window_has_scenes"
+  }
+
+  coverage_status <- if (is.na(fixed_scale_coverage)) {
+    "coverage_unavailable"
+  } else if (fixed_scale_coverage < coverage_threshold) {
+    "low_valid_pixel_coverage"
+  } else {
+    "coverage_passes_threshold"
+  }
+
+  tibble(
+    year = w$year,
+    window = w$window,
+    key = w$key,
+    target_start = target_start,
+    target_end = as.character(w$target_end),
+    expanded_start = as.character(w$expanded_start),
+    expanded_end = as.character(w$expanded_end),
+    expanded_scene_count = as.integer(
+      availability_summary$scene_count[
+        match(w$key, availability_summary$key)
+      ]
+    ),
+    target_scene_count = target_scene_count,
+    unique_target_dates = length(target_dates),
+    target_acquisition_dates = paste(target_dates, collapse = "; "),
+    fixed_scale_coverage = fixed_scale_coverage,
+    fixed_scale_coverage_pct = round(
+      100 * fixed_scale_coverage, 2
+    ),
+    target_status = target_status,
+    coverage_status = coverage_status
   )
 }
+
+# Validate all 16 windows.
+target_validation <- bind_rows(
+  lapply(seq_len(nrow(window_schedule)), function(i) {
+    validate_one_window(window_schedule[i, ])
+  })
+) %>%
+  arrange(year, match(window, windows$window))
+
+print(target_validation, n = Inf, width = Inf)
+
+# Export the validation report.
+readr::write_csv(
+  target_validation,
+  "Tharaka_Landsat_Target_Window_Validation.csv"
+)
+
 ```
 
 # 10. Inspect a composite interactively
@@ -925,29 +1008,3791 @@ It is not evaluated when knitting the PDF because the Earth Engine
 Map widget is intended for interactive inspection.
 
 ```{r inspect-composite, eval=FALSE}
+
 # =========================================================
-# 11. INTERACTIVE VISUAL INSPECTION
+# SECTION 11: TARGET COMPOSITES AND FINAL DATA SELECTION
 # =========================================================
 
-test_image <- seasonal_composites[["2025_wet_may"]]
+library(dplyr)
+library(tibble)
+library(readr)
 
-if (!is.null(test_image)) {
+# Calculate valid-pixel coverage for a composite at fixed 30 m.
+get_fixed_coverage <- function(image) {
 
-  Map$centerObject(roi, 10)
+  if (is.null(image)) return(NA_real_)
 
-  Map$addLayer(
-    test_image,
-    list(
-      bands = c("swir1", "nir", "red"),
-      min = 0,
-      max = 0.4
+  tryCatch({
+
+    valid <- ee_method(
+      image, "select",
+      c("blue", "green", "red", "nir", "swir1", "swir2")
+    )
+
+    valid <- ee_method(valid, "mask")
+    valid <- ee_method(valid, "reduce", ee$Reducer$min())
+    valid <- ee_method(valid, "rename", "valid")
+
+    result <- ee_method(
+      valid, "reduceRegion",
+      reducer = ee$Reducer$mean(),
+      geometry = roi,
+      scale = 30,
+      maxPixels = 1e10,
+      tileScale = 4
+    )
+
+    values <- ee_get_info(result)
+    x <- values[["valid"]]
+
+    if (is.null(x)) NA_real_ else as.numeric(x)
+
+  }, error = function(e) {
+    message("Coverage calculation failed: ", conditionMessage(e))
+    NA_real_
+  })
+}
+
+
+# Build a composite using acquisitions inside the original target dates.
+build_target_composite <- function(w) {
+
+  message("Building target-only composite: ", w$key)
+
+  start <- as.character(w$target_start)
+  end_exclusive <- as.character(w$target_end + 1)
+
+  collections <- list()
+  total_scenes <- 0L
+
+  for (sensor in sensor_specs) {
+
+    raw <- ee$ImageCollection(sensor$id)
+    raw <- ee_method(raw, "filterDate", start, end_exclusive)
+    raw <- ee_method(raw, "filterBounds", roi)
+
+    n <- tryCatch(
+      as.integer(ee_get_info(ee_method(raw, "size"))),
+      error = function(e) 0L
+    )
+
+    total_scenes <- total_scenes + n
+
+    if (n > 0L) {
+      collections[[length(collections) + 1L]] <-
+        ee_method(raw, "map", sensor$callback)
+    }
+  }
+
+  if (total_scenes == 0L || length(collections) == 0L) {
+    return(list(
+      image = NULL,
+      scene_count = total_scenes,
+      coverage = NA_real_
+    ))
+  }
+
+  merged <- collections[[1]]
+
+  if (length(collections) > 1L) {
+    for (j in 2:length(collections)) {
+      merged <- ee_method(merged, "merge", collections[[j]])
+    }
+  }
+
+  composite <- ee_method(merged, "median")
+  composite <- ee_method(composite, "clip", roi)
+
+  list(
+    image = composite,
+    scene_count = total_scenes,
+    coverage = get_fixed_coverage(composite)
+  )
+}
+
+
+# Build target composites for all 16 combinations.
+target_composites <- vector("list", nrow(window_schedule))
+names(target_composites) <- window_schedule$key
+
+target_composite_results <- vector("list", nrow(window_schedule))
+
+for (i in seq_len(nrow(window_schedule))) {
+
+  w <- window_schedule[i, ]
+
+  result <- build_target_composite(w)
+
+  target_composites[[w$key]] <- result$image
+
+  target_composite_results[[i]] <- tibble(
+    key = w$key,
+    target_scene_count_rechecked = result$scene_count,
+    target_fixed_coverage = result$coverage,
+    target_fixed_coverage_pct = round(100 * result$coverage, 2)
+  )
+}
+
+target_composite_summary <- bind_rows(target_composite_results)
+
+
+# Join target-only and expanded-window assessment results.
+selection_table <- target_validation %>%
+  left_join(
+    target_composite_summary,
+    by = "key"
+  ) %>%
+  left_join(
+    availability_summary %>%
+      select(
+        key,
+        expanded_coverage_original = valid_pixel_coverage,
+        expanded_coverage_original_pct = valid_pixel_coverage_pct,
+        expanded_acquisition_dates = acquisition_dates
+      ),
+    by = "key"
+  ) %>%
+  mutate(
+    target_support = case_when(
+      target_scene_count_rechecked == 0 ~ "buffer_dependent",
+      target_scene_count_rechecked <= 2 ~ "limited_target_support",
+      TRUE ~ "multiple_target_scenes"
     ),
-    "Tharaka May 2025"
+
+    target_coverage_pass = !is.na(target_fixed_coverage) &
+      target_fixed_coverage >= coverage_threshold,
+
+    expanded_coverage_pass = !is.na(expanded_coverage_original) &
+      expanded_coverage_original >= coverage_threshold,
+
+    selection_recommendation = case_when(
+      target_scene_count_rechecked > 0 &
+        target_coverage_pass &
+        target_scene_count_rechecked >= 3 ~
+        "prefer_target_window",
+
+      target_scene_count_rechecked > 0 &
+        target_coverage_pass ~
+        "target_window_candidate_limited_dates",
+
+      target_scene_count_rechecked == 0 &
+        expanded_coverage_pass ~
+        "expanded_window_fallback_requires_review",
+
+      expanded_coverage_pass ~
+        "review_target_and_expanded_data",
+
+      TRUE ~
+        "manual_review_required"
+    ),
+
+    selection_reason = case_when(
+      selection_recommendation == "prefer_target_window" ~
+        "At least three target-window scenes and coverage passes screening threshold",
+
+      selection_recommendation == "target_window_candidate_limited_dates" ~
+        "Target-window scenes exist, but temporal support is limited",
+
+      selection_recommendation == "expanded_window_fallback_requires_review" ~
+        "No target-window scenes; expanded imagery is a possible substitute",
+
+      selection_recommendation == "review_target_and_expanded_data" ~
+        "Target coverage does not pass; inspect both composites",
+
+      TRUE ~
+        "Coverage is unavailable or inadequate"
+    )
+  ) %>%
+  arrange(year, match(window, windows$window))
+
+
+# Inspect the final acquisition-selection table.
+print(
+  selection_table %>%
+    select(
+      year, window,
+      target_scene_count_rechecked,
+      target_fixed_coverage_pct,
+      expanded_scene_count,
+      expanded_coverage_original_pct,
+      target_support,
+      selection_recommendation,
+      selection_reason
+    ),
+  n = Inf,
+  width = Inf
+)
+
+# Save the full decision table.
+readr::write_csv(
+  selection_table,
+  "Tharaka_Landsat_Acquisition_Selection.csv"
+)
+
+```
+
+```{r}
+
+# =========================================================
+# SECTION 12: FINALISE PROVISIONAL COMPOSITE SELECTION
+# =========================================================
+
+library(dplyr)
+library(readr)
+
+selected_composites <- vector(
+  "list",
+  nrow(selection_table)
+)
+names(selected_composites) <- selection_table$key
+
+final_selection <- selection_table %>%
+  mutate(
+    selected_source = case_when(
+      target_scene_count_rechecked >= 2 &
+        !is.na(target_fixed_coverage) &
+        target_fixed_coverage >= coverage_threshold ~
+        "target_window",
+
+      !is.na(expanded_coverage_original) &
+        expanded_coverage_original >= coverage_threshold ~
+        "expanded_window_fallback",
+
+      TRUE ~ "manual_review_required"
+    ),
+
+    selection_status = case_when(
+      selected_source == "target_window" ~
+        "provisional_target_composite",
+
+      selected_source == "expanded_window_fallback" ~
+        "provisional_buffer_fallback",
+
+      TRUE ~
+        "not_selected"
+    ),
+
+    selection_notes = case_when(
+      selected_source == "target_window" &
+        target_scene_count_rechecked <= 2 ~
+        "Target dates retained; limited scene count; inspect imagery",
+
+      selected_source == "target_window" ~
+        "Target-date composite passes preliminary coverage screening",
+
+      selected_source == "expanded_window_fallback" &
+        target_scene_count_rechecked == 0 ~
+        "No target-date scenes; expanded dates used provisionally",
+
+      selected_source == "expanded_window_fallback" ~
+        "Target composite has low coverage; expanded alternative requires review",
+
+      TRUE ~
+        "No suitable composite under current screening rules"
+    )
   )
 
-  Map
+# Select the matching image for each year-season combination.
+for (i in seq_len(nrow(final_selection))) {
+
+  key <- final_selection$key[i]
+  source <- final_selection$selected_source[i]
+
+  if (source == "target_window") {
+    selected_composites[[key]] <- target_composites[[key]]
+
+  } else if (source == "expanded_window_fallback") {
+    selected_composites[[key]] <- seasonal_composites[[key]]
+
+  } else {
+    selected_composites[[key]] <- NULL
+  }
+}
+
+# Summarise the provisional decisions.
+print(
+  final_selection %>%
+    select(
+      year, window,
+      target_scene_count_rechecked,
+      target_fixed_coverage_pct,
+      expanded_scene_count,
+      expanded_coverage_original_pct,
+      selected_source,
+      selection_status,
+      selection_notes
+    ),
+  n = Inf,
+  width = Inf
+)
+
+# Export the full selection manifest.
+readr::write_csv(
+  final_selection,
+  "Tharaka_Landsat_Final_Selection_Manifest.csv"
+)
+
+cat(
+  "\nSelected target composites:",
+  sum(final_selection$selected_source == "target_window"),
+  "\n"
+)
+
+cat(
+  "Expanded-window fallbacks:",
+  sum(final_selection$selected_source == "expanded_window_fallback"),
+  "\n"
+)
+
+cat(
+  "Windows requiring manual review:",
+  sum(final_selection$selected_source == "manual_review_required"),
+  "\n"
+)
+
+```
+
+
+```{r}
+
+# =========================================================
+# SECTION 13A: VISUAL QUALITY CONTROL
+# =========================================================
+
+library(rgee)
+library(dplyr)
+library(tibble)
+library(readr)
+
+# Centre the interactive map on Tharaka Sub-county.
+Map$centerObject(roi, 10)
+
+# Add the ROI boundary for orientation.
+Map$addLayer(
+  roi,
+  list(color = "yellow"),
+  name = "Tharaka ROI"
+)
+
+for (key in names(selected_composites)) {
+
+  image <- selected_composites[[key]]
+
+  if (is.null(image)) {
+    message("Skipping unavailable composite: ", key)
+    next
+  }
+
+  message("Adding visual QC layers: ", key)
+
+  # True-colour RGB: red, green, blue.
+  Map$addLayer(
+    image,
+    list(
+      bands = c("red", "green", "blue"),
+      min = 0,
+      max = 0.30,
+      gamma = 1.2
+    ),
+    name = paste0(key, "_RGB"),
+    shown = FALSE
+  )
+
+  # False colour: near infrared, red, green.
+  Map$addLayer(
+    image,
+    list(
+      bands = c("nir", "red", "green"),
+      min = 0,
+      max = 0.40,
+      gamma = 1.2
+    ),
+    name = paste0(key, "_FalseColour"),
+    shown = FALSE
+  )
+
+  # NDVI: vegetation contrast.
+  ndvi <- image$
+    normalizedDifference(c("nir", "red"))$
+    rename("NDVI")
+
+  Map$addLayer(
+    ndvi,
+    list(
+      min = -0.2,
+      max = 0.8,
+      palette = c("8c510a", "f6e8c3", "80cdc1", "01665e")
+    ),
+    name = paste0(key, "_NDVI"),
+    shown = FALSE
+  )
+}
+
+cat(
+  "Visual QC layers added. Use the map layer selector to inspect ",
+  "each year and season.\n"
+)
+
+```
+
+
+```{r}
+
+# =========================================================
+# SECTION 13B: SPECTRAL QUALITY-CONTROL SUMMARY
+# =========================================================
+
+get_spectral_summary <- function(key, image, source) {
+
+  if (is.null(image)) {
+    return(tibble(
+      key = key,
+      source = source,
+      mean_ndvi = NA_real_,
+      mean_blue = NA_real_,
+      mean_green = NA_real_,
+      mean_red = NA_real_,
+      mean_nir = NA_real_,
+      mean_swir1 = NA_real_,
+      mean_swir2 = NA_real_,
+      qc_status = "no_composite"
+    ))
+  }
+
+  stats <- tryCatch({
+
+    ndvi <- image$
+      normalizedDifference(c("nir", "red"))$
+      rename("NDVI")
+
+    combined <- image$select(
+      c("blue", "green", "red", "nir", "swir1", "swir2")
+    )$addBands(ndvi)
+
+    result <- combined$reduceRegion(
+      reducer = ee$Reducer$mean(),
+      geometry = roi,
+      scale = 30,
+      maxPixels = 1e10,
+      tileScale = 4
+    )$getInfo()
+
+    result <- reticulate::py_to_r(result)
+
+    get_stat <- function(name) {
+      value <- result[[name]]
+      if (is.null(value)) NA_real_ else as.numeric(value)
+    }
+
+    tibble(
+      key = key,
+      source = source,
+      mean_ndvi = get_stat("NDVI"),
+      mean_blue = get_stat("blue"),
+      mean_green = get_stat("green"),
+      mean_red = get_stat("red"),
+      mean_nir = get_stat("nir"),
+      mean_swir1 = get_stat("swir1"),
+      mean_swir2 = get_stat("swir2"),
+      qc_status = "summary_calculated"
+    )
+
+  }, error = function(e) {
+    message("Spectral summary failed for ", key, ": ",
+            conditionMessage(e))
+
+    tibble(
+      key = key,
+      source = source,
+      mean_ndvi = NA_real_,
+      mean_blue = NA_real_,
+      mean_green = NA_real_,
+      mean_red = NA_real_,
+      mean_nir = NA_real_,
+      mean_swir1 = NA_real_,
+      mean_swir2 = NA_real_,
+      qc_status = "summary_failed"
+    )
+  })
+
+  stats
+}
+
+spectral_summary <- bind_rows(
+  lapply(names(selected_composites), function(key) {
+
+    source <- final_selection$selected_source[
+      match(key, final_selection$key)
+    ]
+
+    get_spectral_summary(
+      key = key,
+      image = selected_composites[[key]],
+      source = source
+    )
+  })
+) %>%
+  left_join(
+    final_selection %>% select(key, year, window),
+    by = "key"
+  ) %>%
+  select(
+    year, window, key, source,
+    mean_ndvi, mean_blue, mean_green, mean_red,
+    mean_nir, mean_swir1, mean_swir2, qc_status
+  ) %>%
+  arrange(year, window)
+
+print(spectral_summary, n = Inf, width = Inf)
+
+readr::write_csv(
+  spectral_summary,
+  "Tharaka_Landsat_Spectral_QC.csv"
+)
+
+```
+
+```{r}
+
+# =========================================================
+# SECTION 13C: CORRECTED NDVI AND SEASONAL COMPARISONS
+# =========================================================
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(readr)
+
+get_spectral_summary_v2 <- function(key, image, source) {
+
+  if (is.null(image)) {
+    return(tibble(
+      key = key,
+      source = source,
+      mean_ndvi = NA_real_,
+      mean_blue = NA_real_,
+      mean_green = NA_real_,
+      mean_red = NA_real_,
+      mean_nir = NA_real_,
+      mean_swir1 = NA_real_,
+      mean_swir2 = NA_real_,
+      qc_status = "no_composite"
+    ))
+  }
+
+  tryCatch({
+
+    nir <- image$select("nir")
+    red <- image$select("red")
+
+    denominator <- nir$add(red)
+
+    # Explicit NDVI calculation; mask only zero denominators.
+    ndvi <- nir$subtract(red)$
+      divide(denominator)$
+      updateMask(denominator$neq(0))$
+      rename("NDVI")
+
+    combined <- image$select(
+      c("blue", "green", "red", "nir", "swir1", "swir2")
+    )$addBands(ndvi)
+
+    result <- combined$reduceRegion(
+      reducer = ee$Reducer$mean(),
+      geometry = roi,
+      scale = 30,
+      maxPixels = 1e10,
+      tileScale = 4
+    )$getInfo()
+
+    result <- reticulate::py_to_r(result)
+
+    get_stat <- function(name) {
+      value <- result[[name]]
+      if (is.null(value)) NA_real_ else as.numeric(value)
+    }
+
+    tibble(
+      key = key,
+      source = source,
+      mean_ndvi = get_stat("NDVI"),
+      mean_blue = get_stat("blue"),
+      mean_green = get_stat("green"),
+      mean_red = get_stat("red"),
+      mean_nir = get_stat("nir"),
+      mean_swir1 = get_stat("swir1"),
+      mean_swir2 = get_stat("swir2"),
+      qc_status = "summary_calculated"
+    )
+
+  }, error = function(e) {
+
+    message("Corrected summary failed for ", key, ": ",
+            conditionMessage(e))
+
+    tibble(
+      key = key,
+      source = source,
+      mean_ndvi = NA_real_,
+      mean_blue = NA_real_,
+      mean_green = NA_real_,
+      mean_red = NA_real_,
+      mean_nir = NA_real_,
+      mean_swir1 = NA_real_,
+      mean_swir2 = NA_real_,
+      qc_status = "summary_failed"
+    )
+  })
+}
+
+
+spectral_summary_v2 <- bind_rows(
+  lapply(names(selected_composites), function(key) {
+
+    source <- final_selection$selected_source[
+      match(key, final_selection$key)
+    ]
+
+    get_spectral_summary_v2(
+      key = key,
+      image = selected_composites[[key]],
+      source = source
+    )
+  })
+) %>%
+  left_join(
+    final_selection %>% select(key, year, window),
+    by = "key"
+  ) %>%
+  mutate(
+    season = case_when(
+      grepl("dry", window) ~ "Dry",
+      grepl("wet", window) ~ "Wet",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  select(
+    year, window, season, key, source,
+    mean_ndvi, mean_blue, mean_green, mean_red,
+    mean_nir, mean_swir1, mean_swir2, qc_status
+  ) %>%
+  arrange(year, match(window, windows$window))
+
+print(spectral_summary_v2, n = Inf, width = Inf)
+
+readr::write_csv(
+  spectral_summary_v2,
+  "Tharaka_Landsat_Spectral_QC_Corrected.csv"
+)
+
+
+# Plot mean NDVI by year and seasonal window.
+p_ndvi <- ggplot(
+  spectral_summary_v2,
+  aes(
+    x = factor(year),
+    y = mean_ndvi,
+    group = window,
+    linetype = window
+  )
+) +
+  geom_line() +
+  geom_point(size = 2.5) +
+  labs(
+    title = "Tharaka Sub-county: Seasonal Mean NDVI",
+    subtitle = "Corrected NDVI calculation; provisional composites",
+    x = "Year",
+    y = "Mean NDVI",
+    linetype = "Seasonal window"
+  ) +
+  theme_minimal(base_size = 12)
+
+print(p_ndvi)
+
+ggsave(
+  "Tharaka_Mean_NDVI_Seasonal_Comparison.png",
+  p_ndvi,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+
+# Plot the six reflectance bands as a compact diagnostic.
+reflectance_long <- spectral_summary_v2 %>%
+  pivot_longer(
+    cols = c(
+      mean_blue, mean_green, mean_red,
+      mean_nir, mean_swir1, mean_swir2
+    ),
+    names_to = "band",
+    values_to = "mean_reflectance"
+  ) %>%
+  mutate(
+    band = recode(
+      band,
+      mean_blue = "Blue",
+      mean_green = "Green",
+      mean_red = "Red",
+      mean_nir = "NIR",
+      mean_swir1 = "SWIR1",
+      mean_swir2 = "SWIR2"
+    )
+  )
+
+p_reflectance <- ggplot(
+  reflectance_long,
+  aes(
+    x = factor(year),
+    y = mean_reflectance,
+    group = band,
+    linetype = band
+  )
+) +
+  geom_line() +
+  geom_point(size = 1.8) +
+  facet_wrap(~ window, ncol = 2) +
+  labs(
+    title = "Seasonal Spectral Reflectance Comparison",
+    x = "Year",
+    y = "Mean surface reflectance",
+    linetype = "Band"
+  ) +
+  theme_minimal(base_size = 10)
+
+print(p_reflectance)
+
+ggsave(
+  "Tharaka_Spectral_Reflectance_Comparison.png",
+  p_reflectance,
+  width = 12,
+  height = 9,
+  dpi = 300
+)
+
+```
+```{r}
+
+# =========================================================
+# SECTION 14: REFERENCE-SAMPLING FRAMEWORK
+# =========================================================
+
+library(dplyr)
+library(tibble)
+library(readr)
+library(reticulate)
+
+# ---------------------------------------------------------
+# 14.1 Sampling settings
+# ---------------------------------------------------------
+
+n_candidates <- 500
+sampling_seed <- 2026
+
+# Confirm that roi is the intended Tharaka Sub-county boundary
+stopifnot(!is.null(roi))
+
+# ---------------------------------------------------------
+# 14.2 Generate random candidate locations in the ROI
+# ---------------------------------------------------------
+
+candidate_points <- ee$FeatureCollection$randomPoints(
+  region = roi,
+  points = n_candidates,
+  seed = sampling_seed,
+  maxError = 30
+)
+
+# Attach an identifier and geographic coordinates.
+coordinate_callback <- reticulate::py_eval(
+  paste0(
+    "lambda f: f.set({",
+    "'point_id': f.get('system:index'),",
+    "'longitude': f.geometry().coordinates().get(0),",
+    "'latitude': f.geometry().coordinates().get(1)",
+    "})"
+  ),
+  convert = FALSE
+)
+
+candidate_points <- ee_method(
+  candidate_points, "map", coordinate_callback
+)
+
+# Retrieve the coordinates as ordinary R vectors.
+point_ids <- ee_get_info(
+  ee_method(candidate_points, "aggregate_array", "point_id")
+)
+
+longitudes <- ee_get_info(
+  ee_method(candidate_points, "aggregate_array", "longitude")
+)
+
+latitudes <- ee_get_info(
+  ee_method(candidate_points, "aggregate_array", "latitude")
+)
+
+reference_points <- tibble(
+  point_id = as.character(unlist(point_ids)),
+  longitude = as.numeric(unlist(longitudes)),
+  latitude = as.numeric(unlist(latitudes))
+) %>%
+  arrange(point_id)
+
+stopifnot(nrow(reference_points) > 0)
+
+cat("Candidate points generated:", nrow(reference_points), "\n")
+
+# ---------------------------------------------------------
+# 14.3 Create a manual reference-label template
+# ---------------------------------------------------------
+
+reference_template <- reference_points
+
+study_years <- c(2000, 2010, 2020, 2025)
+
+for (yr in study_years) {
+  reference_template[[paste0("class_", yr)]] <- NA_character_
+  reference_template[[paste0("confidence_", yr)]] <- NA_character_
+  reference_template[[paste0("evidence_", yr)]] <- NA_character_
+  reference_template[[paste0("notes_", yr)]] <- NA_character_
+}
+
+reference_template <- reference_template %>%
+  mutate(
+    class_2000 = as.character(class_2000),
+    class_2010 = as.character(class_2010),
+    class_2020 = as.character(class_2020),
+    class_2025 = as.character(class_2025)
+  )
+
+readr::write_csv(
+  reference_template,
+  "Tharaka_Reference_Sampling_Template.csv"
+)
+
+# Save the unlabelled coordinates separately as well.
+readr::write_csv(
+  reference_points,
+  "Tharaka_Reference_Candidate_Points.csv"
+)
+
+# ---------------------------------------------------------
+# 14.4 Optional: display candidate locations in the map
+# ---------------------------------------------------------
+
+Map$centerObject(roi, 10)
+
+Map$addLayer(
+  candidate_points,
+  list(color = "cyan"),
+  name = "Reference candidate points",
+  shown = TRUE
+)
+
+print(head(reference_template, 10))
+
+```
+
+
+
+```{r}
+
+# =========================================================
+# SECTION 14A: VERIFY AND ORDER REFERENCE POINTS
+# =========================================================
+
+reference_template <- reference_template %>%
+  mutate(
+    point_number = suppressWarnings(as.integer(point_id))
+  ) %>%
+  arrange(point_number) %>%
+  select(-point_number)
+
+# Check the number of points and coordinate validity.
+sampling_qc <- tibble(
+  total_points = nrow(reference_template),
+  unique_ids = n_distinct(reference_template$point_id),
+  missing_longitude = sum(is.na(reference_template$longitude)),
+  missing_latitude = sum(is.na(reference_template$latitude)),
+  duplicate_coordinates = sum(
+    duplicated(reference_template[c("longitude", "latitude")])
+  )
+)
+
+print(sampling_qc)
+
+# Save the ordered template.
+readr::write_csv(
+  reference_template,
+  "Tharaka_Reference_Sampling_Template.csv"
+)
+
+```
+
+
+```{r}
+
+# =========================================================
+# SECTION 15: PILOT REFERENCE SAMPLE
+# =========================================================
+
+set.seed(2026)
+
+pilot_n <- min(50, nrow(reference_template))
+
+pilot_reference <- reference_template %>%
+  slice_sample(n = pilot_n) %>%
+  arrange(point_id)
+
+readr::write_csv(
+  pilot_reference,
+  "Tharaka_Reference_Pilot_50.csv"
+)
+
+cat("Pilot sample size:", nrow(pilot_reference), "\n")
+
+
+
+# =========================================================
+# SECTION 15: PILOT REFERENCE SAMPLE QUALITY CONTROL
+# =========================================================
+
+library(dplyr)
+library(readr)
+
+# Confirm sample size
+stopifnot(nrow(pilot_reference) == 50)
+
+# Check unique IDs and coordinates
+pilot_qc <- pilot_reference %>%
+  summarise(
+    total_points = n(),
+    unique_ids = n_distinct(point_id),
+    missing_longitude = sum(is.na(longitude)),
+    missing_latitude = sum(is.na(latitude)),
+    duplicate_coordinates = sum(duplicated(
+      paste(longitude, latitude, sep = "_")
+    ))
+  )
+
+print(pilot_qc)
+
+# Inspect the first records and columns
+print(head(pilot_reference, 6))
+print(names(pilot_reference))
+
+# Save a clean pilot copy
+write_csv(
+  pilot_reference,
+  "Tharaka_Reference_Pilot_50.csv"
+)
+```
+
+```{r}
+# =========================================================
+# SECTION 16: PREPARE HISTORICAL REFERENCE LABELS
+# =========================================================
+
+library(dplyr)
+library(tidyr)
+library(readr)
+
+# 1. Sort point IDs numerically
+pilot_reference <- pilot_reference %>%
+  mutate(point_id_numeric = as.integer(point_id)) %>%
+  arrange(point_id_numeric)
+
+# 2. Create one row per point per target year
+pilot_review <- pilot_reference %>%
+  select(point_id, longitude, latitude) %>%
+  crossing(year = c(2000, 2010, 2020, 2025)) %>%
+  mutate(
+    land_cover = NA_character_,
+    confidence = NA_character_,
+    evidence = NA_character_,
+    notes = NA_character_
+  ) %>%
+  arrange(point_id, year)
+
+# 3. Check the review worksheet
+cat("Review records:", nrow(pilot_review), "\n")
+cat("Expected records:", 50 * 4, "\n")
+
+print(head(pilot_review, 8))
+
+# 4. Save the review worksheet
+write_csv(
+  pilot_review,
+  "Tharaka_Historical_Reference_Review.csv"
+)
+
+
+```
+```{r}
+# =========================================================
+# SECTION 16A: VALIDATE AND SAVE REVIEW WORKSHEET
+# =========================================================
+
+library(dplyr)
+library(readr)
+
+stopifnot(nrow(pilot_review) == 200)
+
+# Confirm each point has four years
+year_check <- pilot_review %>%
+  count(point_id, name = "n_years")
+
+stopifnot(all(year_check$n_years == 4))
+
+# Confirm the expected years
+stopifnot(
+  setequal(unique(pilot_review$year), c(2000, 2010, 2020, 2025))
+)
+
+# Save the worksheet
+write_csv(
+  pilot_review,
+  "Tharaka_Historical_Reference_Review.csv"
+)
+
+cat("Worksheet saved successfully.\n")
+cat("Records:", nrow(pilot_review), "\n")
+cat("Unique points:", n_distinct(pilot_review$point_id), "\n")
+
+```
+```{r}
+# Run only if these packages are not installed
+# install.packages(c("leaflet", "htmlwidgets", "htmltools"))
+```
+
+
+```{r}
+# =========================================================
+# SECTION 17.1: INTERACTIVE HISTORICAL IMAGERY MAP
+# =========================================================
+
+library(leaflet)
+library(htmlwidgets)
+library(dplyr)
+library(sf)
+library(reticulate)
+
+# Confirm the required objects exist
+stopifnot(
+  exists("ee"),
+  exists("selected_composites"),
+  exists("pilot_reference")
+)
+
+stopifnot(nrow(pilot_reference) > 0)
+
+# Convert pilot coordinates to an sf object
+pilot_sf <- st_as_sf(
+  pilot_reference,
+  coords = c("longitude", "latitude"),
+  crs = 4326,
+  remove = FALSE
+)
+
+# Visualisation parameters for Landsat surface reflectance
+vis_params <- list(
+  bands = list("red", "green", "blue"),
+  min = 0.0,
+  max = 0.30,
+  gamma = 1.2
+)
+
+# Obtain Earth Engine tile URLs for each selected composite
+composite_names <- names(selected_composites)
+
+if (is.null(composite_names) || length(composite_names) == 0) {
+  stop("selected_composites must be a named list of images.")
+}
+
+tile_urls <- list()
+
+for (nm in composite_names) {
+
+  img <- selected_composites[[nm]]
+
+  map_info <- ee_method(
+    img,
+    "getMapId",
+    vis_params
+  )
+
+  tile_fetcher <- map_info[["tile_fetcher"]]
+
+  tile_url <- reticulate::py_to_r(
+    reticulate::py_get_attr(
+      tile_fetcher,
+      "url_format"
+    )
+  )
+
+  tile_urls[[nm]] <- tile_url
+}
+
+# Build the interactive map
+m <- leaflet(
+  options = leafletOptions(preferCanvas = TRUE)
+) %>%
+  addProviderTiles("CartoDB.Positron", group = "Base map") %>%
+  addCircleMarkers(
+    data = pilot_sf,
+    lng = ~longitude,
+    lat = ~latitude,
+    radius = 4,
+    stroke = TRUE,
+    weight = 1,
+    fillOpacity = 0.9,
+    label = ~paste0("Point ", point_id),
+    popup = ~paste0(
+      "<b>Point ID:</b> ", point_id,
+      "<br><b>Longitude:</b> ", round(longitude, 5),
+      "<br><b>Latitude:</b> ", round(latitude, 5)
+    ),
+    group = "Pilot points"
+  )
+
+# Add each composite as a switchable imagery layer
+for (nm in names(tile_urls)) {
+  m <- m %>%
+    addTiles(
+      urlTemplate = tile_urls[[nm]],
+      group = nm,
+      options = tileOptions(opacity = 1)
+    )
+}
+
+# Add layer controls
+m <- m %>%
+  addLayersControl(
+    baseGroups = "Base map",
+    overlayGroups = c("Pilot points", names(tile_urls)),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  hideGroup(names(tile_urls)) %>%
+  fitBounds(
+    lng1 = min(pilot_reference$longitude, na.rm = TRUE),
+    lat1 = min(pilot_reference$latitude, na.rm = TRUE),
+    lng2 = max(pilot_reference$longitude, na.rm = TRUE),
+    lat2 = max(pilot_reference$latitude, na.rm = TRUE)
+  )
+
+# Display in RStudio Viewer
+m
+
+# Save the interactive map
+htmlwidgets::saveWidget(
+  m,
+  "Tharaka_Historical_Imagery_Review.html",
+  selfcontained = TRUE
+)
+```
+
+
+```{r}
+
+# =========================================================
+# SECTION 18: REFERENCE-LABEL VALIDATION
+# =========================================================
+
+library(dplyr)
+library(readr)
+library(tidyr)
+
+# Read the reviewed worksheet
+reference_file <- "Tharaka_Historical_Reference_Review.csv"
+
+reference_review <- read_csv(
+  reference_file,
+  show_col_types = FALSE
+)
+
+# Allowed values
+allowed_years <- c(2000, 2010, 2020, 2025)
+
+allowed_classes <- c(
+  "grassland", "bushland", "farmland",
+  "settlement", "other", "uncertain"
+)
+
+allowed_confidence <- c("high", "medium", "low")
+
+allowed_evidence <- c(
+  "historical_imagery", "existing_map",
+  "field", "other"
+)
+
+# Standardise text without assigning any labels
+reference_review <- reference_review %>%
+  mutate(
+    point_id = as.character(point_id),
+    year = as.integer(year),
+    land_cover = tolower(trimws(land_cover)),
+    confidence = tolower(trimws(confidence)),
+    evidence = tolower(trimws(evidence)),
+    notes = trimws(notes)
+  )
+
+# Identify invalid values and missing entries
+reference_review <- reference_review %>%
+  mutate(
+    invalid_year = is.na(year) | !year %in% allowed_years,
+
+    missing_class = is.na(land_cover) | land_cover == "",
+
+    invalid_class = !missing_class &
+      !land_cover %in% allowed_classes,
+
+    missing_confidence = is.na(confidence) | confidence == "",
+
+    invalid_confidence = !missing_confidence &
+      !confidence %in% allowed_confidence,
+
+    missing_evidence = is.na(evidence) | evidence == "",
+
+    invalid_evidence = !missing_evidence &
+      !evidence %in% allowed_evidence,
+
+    needs_review =
+      invalid_year |
+      missing_class |
+      invalid_class |
+      missing_confidence |
+      invalid_confidence |
+      missing_evidence |
+      invalid_evidence |
+      land_cover == "uncertain" |
+      confidence == "low"
+  )
+
+# Summary of the validation
+validation_summary <- reference_review %>%
+  summarise(
+    total_records = n(),
+    unique_points = n_distinct(point_id),
+    missing_classes = sum(missing_class),
+    invalid_classes = sum(invalid_class),
+    missing_confidence = sum(missing_confidence),
+    invalid_confidence = sum(invalid_confidence),
+    missing_evidence = sum(missing_evidence),
+    invalid_evidence = sum(invalid_evidence),
+    records_needing_review = sum(needs_review)
+  )
+
+print(validation_summary)
+
+# Label counts by year
+class_counts <- reference_review %>%
+  filter(
+    !missing_class,
+    !invalid_class,
+    land_cover != "uncertain"
+  ) %>%
+  count(year, land_cover, name = "n") %>%
+  arrange(year, land_cover)
+
+print(class_counts)
+
+# Export all records needing attention
+review_flags <- reference_review %>%
+  filter(needs_review)
+
+write_csv(
+  review_flags,
+  "Tharaka_Reference_Review_Flags.csv"
+)
+
+# Export the validation summary and class counts
+write_csv(
+  validation_summary,
+  "Tharaka_Reference_Validation_Summary.csv"
+)
+
+write_csv(
+  class_counts,
+  "Tharaka_Reference_Class_Counts.csv"
+)
+
+cat("Validation completed.\n")
+cat("Records flagged for review:", nrow(review_flags), "\n")
+
+```
+```{r}
+
+# =========================================================
+# SECTION 18B: PREPARE CANDIDATE TRAINING LABELS
+# =========================================================
+
+reference_training <- reference_review %>%
+  filter(
+    !invalid_year,
+    !missing_class,
+    !invalid_class,
+    !missing_confidence,
+    !invalid_confidence,
+    !missing_evidence,
+    !invalid_evidence,
+    land_cover != "uncertain",
+    confidence %in% c("high", "medium"),
+    evidence %in% allowed_evidence
+  ) %>%
+  select(
+    point_id,
+    longitude,
+    latitude,
+    year,
+    land_cover,
+    confidence,
+    evidence,
+    notes
+  )
+
+# Summarise the candidate training records
+training_summary <- reference_training %>%
+  count(year, land_cover, name = "n") %>%
+  arrange(year, land_cover)
+
+print(training_summary)
+
+write_csv(
+  reference_training,
+  "Tharaka_Reference_Training_Candidates.csv"
+)
+
+cat(
+  "Candidate training records:",
+  nrow(reference_training),
+  "\n"
+)
+
+```
+```{r}
+
+# =========================================================
+# SECTION 19: EXCEL REFERENCE-LABELLING WORKBOOK
+# =========================================================
+
+# Install once if necessary
+if (!requireNamespace("openxlsx", quietly = TRUE)) {
+  install.packages("openxlsx")
+}
+
+library(openxlsx)
+library(dplyr)
+
+# Prepare a clean labelling sheet
+labelling_sheet <- pilot_review %>%
+  select(point_id, longitude, latitude, year) %>%
+  mutate(
+    land_cover = "",
+    confidence = "",
+    evidence = "",
+    notes = ""
+  ) %>%
+  arrange(year, point_id)
+
+# Create workbook
+wb <- createWorkbook()
+
+addWorksheet(wb, "Labelling_Sheet")
+addWorksheet(wb, "Progress_Summary")
+addWorksheet(wb, "Instructions")
+
+# Write the labelling sheet
+writeData(
+  wb, "Labelling_Sheet",
+  labelling_sheet,
+  withFilter = TRUE
+)
+
+# Add drop-down validation lists
+class_values <- c(
+  "grassland", "bushland", "farmland",
+  "settlement", "other", "uncertain"
+)
+
+confidence_values <- c("high", "medium", "low")
+
+evidence_values <- c(
+  "historical_imagery", "existing_map",
+  "field", "other"
+)
+
+n_rows <- nrow(labelling_sheet) + 1
+
+dataValidation(
+  wb, "Labelling_Sheet",
+  cols = 5, rows = 2:n_rows,
+  type = "list",
+  value = paste0('"', paste(class_values, collapse = ","), '"')
+)
+
+dataValidation(
+  wb, "Labelling_Sheet",
+  cols = 6, rows = 2:n_rows,
+  type = "list",
+  value = paste0('"', paste(confidence_values, collapse = ","), '"')
+)
+
+dataValidation(
+  wb, "Labelling_Sheet",
+  cols = 7, rows = 2:n_rows,
+  type = "list",
+  value = paste0('"', paste(evidence_values, collapse = ","), '"')
+)
+
+# Instructions sheet
+instructions <- data.frame(
+  Item = c(
+    "Purpose",
+    "Land-cover classes",
+    "Confidence",
+    "Evidence",
+    "Uncertain labels",
+    "Important"
+  ),
+  Guidance = c(
+    "Interpret each point separately for each target year.",
+    paste(class_values, collapse = ", "),
+    paste(confidence_values, collapse = ", "),
+    paste(evidence_values, collapse = ", "),
+    "Use uncertain when evidence does not support a confident class.",
+    "Do not guess labels. Record the evidence and relevant notes."
+  )
+)
+
+writeData(wb, "Instructions", instructions)
+
+# Create progress summary formulas
+progress <- data.frame(
+  Year = c(2000, 2010, 2020, 2025),
+  Total_Records = 50,
+  Labelled = NA_integer_,
+  Remaining = NA_integer_
+)
+
+writeData(wb, "Progress_Summary", progress)
+
+for (i in 2:5) {
+  wb_formula_row <- i
+  wb_sheet_start <- 2
+  wb_sheet_end <- n_rows
+
+  writeFormula(
+    wb,
+    "Progress_Summary",
+    x = sprintf(
+      'COUNTIFS(Labelling_Sheet!$D$%d:$D$%d,A%d,Labelling_Sheet!$E$%d:$E$%d,"<>")',
+      wb_sheet_start, wb_sheet_end, wb_formula_row,
+      wb_sheet_start, wb_sheet_end
+    ),
+    startCol = 3,
+    startRow = wb_formula_row
+  )
+
+  writeFormula(
+    wb,
+    "Progress_Summary",
+    x = sprintf("B%d-C%d", wb_formula_row, wb_formula_row),
+    startCol = 4,
+    startRow = wb_formula_row
+  )
+}
+
+# Formatting
+header_style <- createStyle(
+  textDecoration = "bold",
+  fgFill = "#D9EAF7",
+  border = "Bottom"
+)
+
+for (sheet in c(
+  "Labelling_Sheet",
+  "Progress_Summary",
+  "Instructions"
+)) {
+  addStyle(
+    wb, sheet, header_style,
+    rows = 1, cols = 1:8,
+    gridExpand = TRUE
+  )
+  freezePane(wb, sheet, firstRow = TRUE)
+  setColWidths(wb, sheet, cols = 1:8, widths = "auto")
+}
+
+# Save workbook
+output_file <- "Tharaka_Reference_Labelling_Workbook.xlsx"
+
+saveWorkbook(
+  wb,
+  output_file,
+  overwrite = TRUE
+)
+
+cat("Workbook created:", output_file, "\n")
+
+```
+```{r}
+# =========================================================
+# SECTION 20: IMPORT REFERENCE-LABELLING WORKBOOK
+# =========================================================
+
+library(openxlsx)
+library(dplyr)
+library(readr)
+
+# Select the completed workbook from your computer
+workbook_path <- file.choose()
+
+# Import the labelling sheet
+reference_review <- read.xlsx(
+  workbook_path,
+  sheet = "Labelling_Sheet",
+  detectDates = FALSE
+) %>%
+  mutate(
+    point_id = as.character(point_id),
+    year = as.integer(year),
+    longitude = as.numeric(longitude),
+    latitude = as.numeric(latitude),
+    land_cover = tolower(trimws(as.character(land_cover))),
+    confidence = tolower(trimws(as.character(confidence))),
+    evidence = tolower(trimws(as.character(evidence))),
+    notes = as.character(notes)
+  )
+
+# Convert empty Excel cells to NA
+reference_review <- reference_review %>%
+  mutate(
+    across(
+      c(land_cover, confidence, evidence, notes),
+      ~ na_if(trimws(.x), "")
+    )
+  )
+
+# Inspect the imported data
+cat("Imported records:", nrow(reference_review), "\n")
+cat("Unique points:", n_distinct(reference_review$point_id), "\n")
+
+print(head(reference_review, 10))
+print(names(reference_review))
+
+# Check labelling progress by year
+import_progress <- reference_review %>%
+  group_by(year) %>%
+  summarise(
+    total_records = n(),
+    labelled = sum(!is.na(land_cover)),
+    remaining = sum(is.na(land_cover)),
+    .groups = "drop"
+  )
+
+print(import_progress)
+
+# Save an R-ready CSV copy
+write_csv(
+  reference_review,
+  "Tharaka_Reference_Review_Imported.csv"
+)
+
+cat("Import completed.\n")
+```
+```{r}
+
+# =========================================================
+# SECTION 21: FIRST BATCH OF REFERENCE LABELS
+# =========================================================
+
+library(dplyr)
+library(readr)
+
+# Start with 10 locations for the year 2000
+review_batch <- reference_review %>%
+  filter(year == 2000) %>%
+  arrange(as.integer(point_id)) %>%
+  slice_head(n = 10) %>%
+  select(
+    point_id,
+    longitude,
+    latitude,
+    year,
+    land_cover,
+    confidence,
+    evidence,
+    notes
+  )
+
+# Save a separate review sheet
+write_csv(
+  review_batch,
+  "Tharaka_Reference_Batch01_Year2000.csv"
+)
+
+print(review_batch)
+
+cat("Records in review batch:", nrow(review_batch), "\n")
+
+```
+```{r}
+
+# =========================================================
+# SECTION 21A: POINT REVIEW LINKS
+# =========================================================
+
+review_batch <- review_batch %>%
+  mutate(
+    map_url = sprintf(
+      "https://www.google.com/maps?q=%.6f,%.6f",
+      latitude,
+      longitude
+    )
+  )
+
+print(
+  review_batch %>%
+    select(point_id, year, longitude, latitude, map_url)
+)
+
+write_csv(
+  review_batch,
+  "Tharaka_Reference_Batch01_Year2000.csv"
+)
+
+```
+
+
+
+```{r}
+
+# =========================================================
+# SECTION 22A: GENERATE YEAR-SPECIFIC REVIEW BATCHES
+# =========================================================
+
+library(dplyr)
+library(readr)
+
+years <- c(2000, 2010, 2020, 2025)
+
+# Output directory
+review_dir <- "Tharaka_Reference_Review_Batches"
+
+if (!dir.exists(review_dir)) {
+  dir.create(review_dir, recursive = TRUE)
+}
+
+# Ensure point IDs are sorted numerically
+reference_review <- reference_review %>%
+  mutate(
+    point_id = as.character(point_id),
+    point_id_numeric = suppressWarnings(as.integer(point_id))
+  )
+
+# Export a separate review queue for each year
+for (yr in years) {
+
+  year_batch <- reference_review %>%
+    filter(year == yr) %>%
+    arrange(point_id_numeric) %>%
+    select(
+      point_id,
+      longitude,
+      latitude,
+      year,
+      land_cover,
+      confidence,
+      evidence,
+      notes
+    )
+
+  output_file <- file.path(
+    review_dir,
+    paste0("Tharaka_Review_", yr, ".csv")
+  )
+
+  write_csv(year_batch, output_file)
+
+  cat(
+    "Year:", yr,
+    "| Records:", nrow(year_batch),
+    "| Saved:", output_file, "\n"
+  )
+}
+
+```
+```{r}
+
+# =========================================================
+# SECTION 22B: LABELLING PROGRESS MONITOR
+# =========================================================
+
+progress_summary <- reference_review %>%
+  group_by(year) %>%
+  summarise(
+    total_records = n(),
+    labelled = sum(
+      !is.na(land_cover) & land_cover != ""
+    ),
+    remaining = total_records - labelled,
+    percent_complete = round(
+      100 * labelled / total_records, 1
+    ),
+    .groups = "drop"
+  ) %>%
+  arrange(year)
+
+print(progress_summary)
+
+write_csv(
+  progress_summary,
+  "Tharaka_Reference_Progress.csv"
+)
+
+```
+```{r}
+
+
+# =========================================================
+# SECTION 23: EXTRACT PILOT-POINT SPECTRAL INDICATORS
+# =========================================================
+
+library(dplyr)
+library(readr)
+library(reticulate)
+
+# ---------------------------------------------------------
+# 23.1 Confirm required objects
+# ---------------------------------------------------------
+
+stopifnot(
+  exists("ee"),
+  exists("selected_composites"),
+  exists("pilot_reference"),
+  exists("ee_method"),
+  exists("ee_get_info")
+)
+
+stopifnot(
+  nrow(pilot_reference) > 0,
+  length(selected_composites) > 0
+)
+
+# ---------------------------------------------------------
+# 23.2 Create Earth Engine point features
+# ---------------------------------------------------------
+
+pilot_features <- lapply(
+  seq_len(nrow(pilot_reference)),
+  function(i) {
+
+    lon <- as.numeric(pilot_reference$longitude[i])
+    lat <- as.numeric(pilot_reference$latitude[i])
+    pid <- as.character(pilot_reference$point_id[i])
+
+    geometry <- ee$Geometry$Point(
+      reticulate::tuple(lon, lat)
+    )
+
+    ee$Feature(
+      geometry,
+      list(
+        point_id = pid,
+        longitude = lon,
+        latitude = lat
+      )
+    )
+  }
+)
+
+# Build the FeatureCollection using a Python list
+pilot_list <- reticulate::r_to_py(
+  pilot_features,
+  convert = FALSE
+)
+
+pilot_fc <- ee$FeatureCollection(pilot_list)
+
+cat(
+  "Pilot locations prepared:",
+  nrow(pilot_reference), "\n"
+)
+
+# ---------------------------------------------------------
+# 23.3 Define output containers
+# ---------------------------------------------------------
+
+spectral_results <- list()
+
+# ---------------------------------------------------------
+# 23.4 Sample each selected composite
+# ---------------------------------------------------------
+
+for (nm in names(selected_composites)) {
+
+  cat("Processing composite:", nm, "\n")
+
+  img <- selected_composites[[nm]]
+
+  # Calculate NDVI.
+  # IMPORTANT: pass band names as a flat character vector.
+  ndvi <- ee_method(
+    img,
+    "normalizedDifference",
+    c("nir", "red")
+  )
+
+  ndvi <- ee_method(
+    ndvi,
+    "rename",
+    "NDVI"
+  )
+
+  # Add NDVI to the six reflectance bands
+  img_with_ndvi <- ee_method(
+    img,
+    "addBands",
+    ndvi
+  )
+
+  # Sample the image at each point
+  sampled <- ee_method(
+    img_with_ndvi,
+    "sampleRegions",
+    collection = pilot_fc,
+    properties = reticulate::tuple(
+      "point_id", "longitude", "latitude"
+    ),
+    scale = 30,
+    geometries = FALSE,
+    tileScale = 4
+  )
+
+  # Retrieve sampled records from Earth Engine
+  sampled_info <- ee_get_info(sampled)
+
+  # Convert the feature properties to an R data frame
+  if (
+    is.null(sampled_info$features) ||
+    length(sampled_info$features) == 0
+  ) {
+    warning(
+      "No sampled records returned for composite: ",
+      nm
+    )
+    next
+  }
+
+  feature_rows <- lapply(
+    sampled_info$features,
+    function(f) {
+
+      props <- f$properties
+
+      # Convert each property list into a one-row data frame
+      as.data.frame(
+        lapply(props, function(x) {
+          if (is.null(x) || length(x) == 0) {
+            NA
+          } else {
+            unlist(x, use.names = FALSE)[1]
+          }
+        }),
+        stringsAsFactors = FALSE
+      )
+    }
+  )
+
+  result <- bind_rows(feature_rows) %>%
+    mutate(
+      composite = nm,
+      year = as.integer(
+        sub("_.*$", "", nm)
+      )
+    )
+
+  spectral_results[[nm]] <- result
+
+  cat(
+    "  Sampled records:",
+    nrow(result), "\n"
+  )
+}
+
+# ---------------------------------------------------------
+# 23.5 Combine, inspect and export results
+# ---------------------------------------------------------
+
+if (length(spectral_results) == 0) {
+
+  stop(
+    "No spectral data were returned. Check the selected ",
+    "composites, band names and Earth Engine errors."
+  )
+
+}
+
+pilot_spectral_data <- bind_rows(spectral_results)
+
+# Reorder important identifier columns first
+pilot_spectral_data <- pilot_spectral_data %>%
+  relocate(
+    composite,
+    year,
+    point_id,
+    longitude,
+    latitude
+  )
+
+# Summarise extraction coverage
+spectral_qc <- pilot_spectral_data %>%
+  group_by(composite, year) %>%
+  summarise(
+    records_returned = n(),
+    unique_points = n_distinct(point_id),
+    missing_NDVI = sum(is.na(NDVI)),
+    .groups = "drop"
+  )
+
+print(spectral_qc)
+print(head(pilot_spectral_data, 10))
+
+# Export data and QC report
+write_csv(
+  pilot_spectral_data,
+  "Tharaka_Pilot_Spectral_Indicators.csv"
+)
+
+write_csv(
+  spectral_qc,
+  "Tharaka_Pilot_Spectral_QC.csv"
+)
+
+cat(
+  "Spectral extraction complete.\n",
+  "Total sampled records: ",
+  nrow(pilot_spectral_data), "\n",
+  sep = ""
+)
+
+```
+
+```{r}
+
+# =========================================================
+# SECTION 24: SPECTRAL EXTRACTION COMPLETENESS
+# =========================================================
+
+library(dplyr)
+library(tidyr)
+library(readr)
+
+# Expected combinations: every pilot point in every composite
+expected_records <- pilot_reference %>%
+  transmute(
+    point_id = as.character(point_id),
+    longitude,
+    latitude
+  ) %>%
+  crossing(composite = names(selected_composites)) %>%
+  mutate(
+    year = as.integer(sub("_.*$", "", composite))
+  )
+
+# Compare expected combinations with actual extracted records
+observed_records <- pilot_spectral_data %>%
+  distinct(point_id, composite) %>%
+  mutate(point_id = as.character(point_id))
+
+missing_spectral_records <- expected_records %>%
+  anti_join(
+    observed_records,
+    by = c("point_id", "composite")
+  ) %>%
+  arrange(composite, point_id)
+
+# Completeness summary
+completeness_summary <- expected_records %>%
+  left_join(
+    observed_records %>%
+      mutate(returned = TRUE),
+    by = c("point_id", "composite")
+  ) %>%
+  group_by(composite, year) %>%
+  summarise(
+    expected = n(),
+    returned = sum(!is.na(returned)),
+    missing = expected - returned,
+    completeness_pct = round(100 * returned / expected, 1),
+    .groups = "drop"
+  )
+
+print(completeness_summary)
+print(missing_spectral_records)
+
+write_csv(
+  completeness_summary,
+  "Tharaka_Spectral_Completeness.csv"
+)
+
+write_csv(
+  missing_spectral_records,
+  "Tharaka_Missing_Spectral_Records.csv"
+)
+
+```
+```{r}
+
+# =========================================================
+# SECTION 25: CALCULATE ADDITIONAL SPECTRAL INDICES
+# =========================================================
+
+library(dplyr)
+library(readr)
+
+pilot_spectral_indices <- pilot_spectral_data %>%
+  mutate(
+    NDMI = if_else(
+      is.finite(nir + swir1) & (nir + swir1) != 0,
+      (nir - swir1) / (nir + swir1),
+      NA_real_
+    ),
+
+    NDBI = if_else(
+      is.finite(swir1 + nir) & (swir1 + nir) != 0,
+      (swir1 - nir) / (swir1 + nir),
+      NA_real_
+    ),
+
+    SAVI = if_else(
+      is.finite(nir + red + 0.5) &
+        (nir + red + 0.5) != 0,
+      1.5 * (nir - red) / (nir + red + 0.5),
+      NA_real_
+    )
+  )
+
+# Check index ranges and missing values
+index_qc <- pilot_spectral_indices %>%
+  summarise(
+    records = n(),
+    missing_NDVI = sum(is.na(NDVI)),
+    missing_NDMI = sum(is.na(NDMI)),
+    missing_NDBI = sum(is.na(NDBI)),
+    missing_SAVI = sum(is.na(SAVI)),
+    max_abs_NDMI_NDBI_difference = max(
+      abs(NDMI + NDBI),
+      na.rm = TRUE
+    )
+  )
+
+print(index_qc)
+
+# Summarise indicators by year and seasonal window
+index_summary <- pilot_spectral_indices %>%
+  group_by(composite, year) %>%
+  summarise(
+    n = n(),
+    mean_NDVI = mean(NDVI, na.rm = TRUE),
+    mean_NDMI = mean(NDMI, na.rm = TRUE),
+    mean_NDBI = mean(NDBI, na.rm = TRUE),
+    mean_SAVI = mean(SAVI, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+print(index_summary)
+
+# Export indices and summary
+write_csv(
+  pilot_spectral_indices,
+  "Tharaka_Pilot_Spectral_Indices.csv"
+)
+
+write_csv(
+  index_summary,
+  "Tharaka_Pilot_Spectral_Index_Summary.csv"
+)
+
+```
+
+```{r}
+
+# =========================================================
+# SECTION 26: VISUALISE SPECTRAL INDEX PATTERNS
+# =========================================================
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(readr)
+
+# Create season labels from composite names
+index_plot_data <- pilot_spectral_indices %>%
+  mutate(
+    season_window = sub("^\\d{4}_", "", composite),
+    season = case_when(
+      grepl("^dry_", season_window) ~ "Dry",
+      grepl("^wet_", season_window) ~ "Wet",
+      TRUE ~ "Unknown"
+    ),
+    month_window = sub("^(dry|wet)_", "", season_window)
+  )
+
+# Plot 1: Mean NDVI by year and seasonal window
+p_ndvi <- index_plot_data %>%
+  group_by(year, season_window) %>%
+  summarise(
+    mean_NDVI = mean(NDVI, na.rm = TRUE),
+    sd_NDVI = sd(NDVI, na.rm = TRUE),
+    n = n(),
+    se_NDVI = sd_NDVI / sqrt(n),
+    .groups = "drop"
+  ) %>%
+  ggplot(
+    aes(
+      x = year,
+      y = mean_NDVI,
+      colour = season_window,
+      group = season_window
+    )
+  ) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 2.5) +
+  scale_x_continuous(breaks = c(2000, 2010, 2020, 2025)) +
+  labs(
+    title = "Pilot-Point Mean NDVI by Year and Seasonal Window",
+    x = "Year",
+    y = "Mean NDVI",
+    colour = "Window"
+  ) +
+  theme_minimal(base_size = 12)
+
+print(p_ndvi)
+
+ggsave(
+  "Tharaka_Pilot_NDVI_Trends.png",
+  p_ndvi,
+  width = 9,
+  height = 5.5,
+  dpi = 300
+)
+
+# Plot 2: Compare all index distributions
+index_long <- index_plot_data %>%
+  select(
+    year, season_window, NDVI, NDMI, SAVI
+  ) %>%
+  pivot_longer(
+    cols = c(NDVI, NDMI, SAVI),
+    names_to = "index",
+    values_to = "value"
+  )
+
+p_indices <- ggplot(
+  index_long,
+  aes(
+    x = factor(year),
+    y = value,
+    group = interaction(year, season_window)
+  )
+) +
+  geom_boxplot(aes(fill = season_window), outlier.size = 0.8) +
+  facet_wrap(~ index, scales = "free_y", ncol = 1) +
+  labs(
+    title = "Spectral Index Distributions at Pilot Locations",
+    x = "Year",
+    y = "Index value",
+    fill = "Window"
+  ) +
+  theme_minimal(base_size = 11)
+
+print(p_indices)
+
+ggsave(
+  "Tharaka_Pilot_Index_Distributions.png",
+  p_indices,
+  width = 10,
+  height = 10,
+  dpi = 300
+)
+
+cat("Section 26 plots saved successfully.\n")
+
+```
+```{r}
+# =========================================================
+# SECTION 27: SUMMARISE PILOT SPECTRAL PATTERNS
+# =========================================================
+
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
+
+# 1. Extract seasonal identifiers from composite
+pilot_index_summary <- pilot_spectral_indices %>%
+  mutate(
+    year = as.integer(year),
+    window = str_remove(composite, "^\\d{4}_"),
+    season = case_when(
+      str_starts(window, "dry") ~ "Dry",
+      str_starts(window, "wet") ~ "Wet",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  group_by(year, composite, window, season) %>%
+  summarise(
+    n = n(),
+    mean_NDVI = mean(NDVI, na.rm = TRUE),
+    sd_NDVI = sd(NDVI, na.rm = TRUE),
+    mean_NDMI = mean(NDMI, na.rm = TRUE),
+    sd_NDMI = sd(NDMI, na.rm = TRUE),
+    mean_SAVI = mean(SAVI, na.rm = TRUE),
+    sd_SAVI = sd(SAVI, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(year, season, window)
+
+# 2. Display results
+print(pilot_index_summary, n = Inf)
+
+# 3. Export summary
+write_csv(
+  pilot_index_summary,
+  "Tharaka_Pilot_Spectral_Patterns_Summary.csv"
+)
+
+# 4. Check number of seasonal windows per year
+combination_check <- pilot_index_summary %>%
+  count(year, name = "number_of_windows")
+
+print(combination_check)
+
+# 5. Quality-control flags
+qc_flags <- pilot_index_summary %>%
+  mutate(
+    low_sample_size = n < 40,
+    missing_index_summary =
+      is.na(mean_NDVI) |
+      is.na(mean_NDMI) |
+      is.na(mean_SAVI)
+  )
+
+print(qc_flags, n = Inf)
+
+write_csv(
+  qc_flags,
+  "Tharaka_Pilot_Spectral_Patterns_QC.csv"
+)
+
+cat("Section 27 completed successfully.\n")
+```
+```{r}
+# =========================================================
+# SECTION 28: NDVI TRENDS BY SEASONAL WINDOW
+# =========================================================
+
+library(ggplot2)
+library(dplyr)
+
+p_ndvi_seasonal <- ggplot(
+  pilot_index_summary,
+  aes(
+    x = year,
+    y = mean_NDVI,
+    group = window
+  )
+) +
+  geom_line(linewidth = 0.8, colour = "#2878B5") +
+  geom_point(size = 2.8, colour = "#D95F02") +
+  geom_errorbar(
+    aes(
+      ymin = mean_NDVI - sd_NDVI,
+      ymax = mean_NDVI + sd_NDVI
+    ),
+    width = 0.8,
+    alpha = 0.5
+  ) +
+  facet_wrap(~ window, ncol = 2) +
+  scale_x_continuous(
+    breaks = c(2000, 2010, 2020, 2025)
+  ) +
+  labs(
+    title = "Seasonal NDVI Patterns in Tharaka Sub-county",
+    subtitle = "Mean NDVI at pilot locations; error bars show ±1 SD",
+    x = "Year",
+    y = "Mean NDVI"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    strip.text = element_text(face = "bold")
+  )
+
+print(p_ndvi_seasonal)
+
+ggsave(
+  "Tharaka_Seasonal_NDVI_Patterns.png",
+  plot = p_ndvi_seasonal,
+  width = 10,
+  height = 7,
+  dpi = 300
+)
+
+cat("Section 28 completed successfully.\n")
+```
+
+```{r}
+# =========================================================
+# SECTION 29: REFERENCE LABEL READINESS CHECK
+# =========================================================
+
+library(dplyr)
+library(readr)
+
+# Confirm reference-review object exists
+if (exists("reference_review")) {
+
+  cat("Reference review records:", nrow(reference_review), "\n")
+
+  print(
+    reference_review %>%
+      summarise(
+        total_records = n(),
+        labelled_classes = sum(
+          !is.na(land_cover) & land_cover != ""
+        ),
+        labelled_confidence = sum(
+          !is.na(confidence) & confidence != ""
+        ),
+        labelled_evidence = sum(
+          !is.na(evidence) & evidence != ""
+        )
+      )
+  )
+
+  print(
+    reference_review %>%
+      count(land_cover, .drop = FALSE)
+  )
+
+} else {
+  cat(
+    "reference_review is not currently loaded. ",
+    "Please import the completed reference workbook first.\n"
+  )
 }
 ```
+```{r}
+
+# =========================================================
+# SECTION 30: PREPARE PILOT REFERENCE-LABELING SHEET
+# =========================================================
+
+library(dplyr)
+library(readr)
+
+pilot_label_sheet <- reference_review %>%
+  select(
+    point_id,
+    year,
+    longitude,
+    latitude,
+    land_cover,
+    confidence,
+    evidence,
+    notes
+  ) %>%
+  arrange(point_id, year)
+
+# Export a CSV for manual labeling
+write_csv(
+  pilot_label_sheet,
+  "Tharaka_Pilot_Reference_Labelling.csv"
+)
+
+# Show labeling requirements
+cat("Records requiring review:", nrow(pilot_label_sheet), "\n")
+cat("Unique locations:", n_distinct(pilot_label_sheet$point_id), "\n")
+cat("Years:", paste(sort(unique(pilot_label_sheet$year)),
+                    collapse = ", "), "\n")
+
+cat("\nPermitted land-cover labels:\n")
+print(c(
+  "grassland",
+  "bushland",
+  "farmland",
+  "settlement",
+  "other",
+  "uncertain"
+))
+
+cat("\nPermitted confidence ratings: high, medium, low\n")
+cat("Evidence: field, historical_imagery, existing_map, other\n")
+```
+```{r}
+
+# =========================================================
+# SECTION 31: OPEN HISTORICAL IMAGERY REVIEW MAP
+# =========================================================
+
+review_map <- file.path(
+  getwd(),
+  "Tharaka_Historical_Imagery_Review.html"
+)
+
+if (file.exists(review_map)) {
+  browseURL(review_map)
+  cat("Review map opened in your browser.\n")
+  cat("Map location:", normalizePath(review_map), "\n")
+} else {
+  cat("Review map was not found in the current working directory.\n")
+  cat("Current directory:", getwd(), "\n")
+  cat("Check where Tharaka_Historical_Imagery_Review.html was saved.\n")
+}
+```
+
+```{r}
+# Check which plots exist in the working directory
+list.files(
+  getwd(),
+  pattern = "\\.png$",
+  full.names = TRUE
+)
+
+
+# Create a results folder
+dir.create(
+  "Tharaka_Land_Cover_Results",
+  showWarnings = FALSE
+)
+
+# Copy the review map if it exists in the current directory
+if (file.exists("Tharaka_Historical_Imagery_Review.html")) {
+  file.copy(
+    "Tharaka_Historical_Imagery_Review.html",
+    "Tharaka_Land_Cover_Results/Tharaka_Historical_Imagery_Review.html",
+    overwrite = TRUE
+  )
+}
+```
+```{r}
+# =========================================================
+# SECTION 32: GENERATE ALL 16 LANDSAT SCENARIO PLOTS
+# =========================================================
+
+library(reticulate)
+library(ggplot2)
+library(png)
+
+# ---------------------------------------------------------
+# 1. Earth Engine session
+# ---------------------------------------------------------
+ee <- reticulate::import("ee", convert = FALSE)
+
+# Reuse the working Earth Engine authentication
+ee$Initialize(project = "thinking-leaf-305215")
+
+# ---------------------------------------------------------
+# 2. Output directory and scenario labels
+# ---------------------------------------------------------
+plot_dir <- "Tharaka_Landsat_Scenario_Plots"
+
+dir.create(
+  plot_dir,
+  showWarnings = FALSE,
+  recursive = TRUE
+)
+
+scenario_labels <- c(
+  dry_feb = "February Dry Season",
+  dry_sep = "September Dry Season",
+  wet_may = "May Wet Season",
+  wet_dec = "December Wet Season"
+)
+
+# ---------------------------------------------------------
+# 3. Confirm the 16 composites are available
+# ---------------------------------------------------------
+scenario_names <- names(selected_composites)
+
+if (length(scenario_names) != 16) {
+  stop(
+    "Expected 16 composites, but found ",
+    length(scenario_names),
+    ". Check selected_composites."
+  )
+}
+
+# ---------------------------------------------------------
+# 4. Plot each scenario
+# ---------------------------------------------------------
+plot_results <- data.frame(
+  composite = scenario_names,
+  status = "Pending",
+  file = NA_character_,
+  stringsAsFactors = FALSE
+)
+
+for (i in seq_along(scenario_names)) {
+
+  scenario <- scenario_names[i]
+
+  message(
+    "\nProcessing scenario ",
+    i, " of ", length(scenario_names),
+    ": ", scenario
+  )
+
+  tryCatch({
+
+    # Retrieve existing Earth Engine image
+    img <- selected_composites[[scenario]]
+
+    # Create true-colour visualisation in Earth Engine
+    visualized_img <- ee$Image$visualize(
+      img,
+      bands = c("red", "green", "blue"),
+      min = 0.02,
+      max = 0.30,
+      gamma = 1.3
+    )
+
+    # Request thumbnail URL
+    thumb <- visualized_img$getThumbURL(
+      reticulate::dict(
+        region = roi,
+        dimensions = 1200,
+        format = "png"
+      )
+    )
+
+    thumb_url <- reticulate::py_to_r(thumb)
+
+    # Download thumbnail to a temporary PNG
+    temp_png <- tempfile(fileext = ".png")
+
+    download.file(
+      url = thumb_url,
+      destfile = temp_png,
+      mode = "wb",
+      quiet = TRUE
+    )
+
+    # Read the image
+    raster_img <- png::readPNG(temp_png)
+
+    # Extract year and seasonal window
+    year <- sub("_.*$", "", scenario)
+    window <- sub("^\\d{4}_", "", scenario)
+
+    if (!window %in% names(scenario_labels)) {
+      stop("Unrecognised seasonal window: ", window)
+    }
+
+    # Create title
+    title_text <- paste(
+      "Tharaka Sub-county —",
+      scenario_labels[[window]],
+      year
+    )
+
+    # Construct framed figure
+    p <- ggplot() +
+      annotation_raster(
+        raster_img,
+        xmin = 0, xmax = 1,
+        ymin = 0, ymax = 1
+      ) +
+      coord_fixed(
+        xlim = c(0, 1),
+        ylim = c(0, 1),
+        expand = FALSE
+      ) +
+      labs(
+        title = title_text,
+        subtitle = paste(
+          "Landsat Collection 2 Level-2",
+          "| True-colour RGB composite"
+        ),
+        caption = paste(
+          "Display stretch: RGB bands,",
+          "min = 0.02, max = 0.30, gamma = 1.3"
+        )
+      ) +
+      theme_void(base_size = 12) +
+      theme(
+        plot.title = element_text(
+          face = "bold",
+          size = 15,
+          hjust = 0.5,
+          margin = margin(b = 8)
+        ),
+        plot.subtitle = element_text(
+          size = 10,
+          hjust = 0.5
+        ),
+        plot.caption = element_text(
+          size = 8,
+          hjust = 0.5
+        ),
+        panel.border = element_rect(
+          colour = "black",
+          fill = NA,
+          linewidth = 0.9
+        ),
+        plot.margin = margin(12, 12, 12, 12)
+      )
+
+    # Save plot
+    output_file <- file.path(
+      plot_dir,
+      paste0("Tharaka_", scenario, ".png")
+    )
+
+    ggsave(
+      filename = output_file,
+      plot = p,
+      width = 9,
+      height = 7,
+      dpi = 300,
+      bg = "white"
+    )
+
+    # Record success
+    plot_results$status[i] <- "Success"
+    plot_results$file[i] <- output_file
+
+    unlink(temp_png)
+
+    message("Saved: ", output_file)
+
+  }, error = function(e) {
+
+    plot_results$status[i] <<- paste(
+      "Failed:", conditionMessage(e)
+    )
+
+    message(
+      "Failed for ", scenario, ": ",
+      conditionMessage(e)
+    )
+  })
+}
+
+# ---------------------------------------------------------
+# 5. Save processing log
+# ---------------------------------------------------------
+write.csv(
+  plot_results,
+  file.path(plot_dir, "Scenario_Plot_Processing_Log.csv"),
+  row.names = FALSE
+)
+
+cat("\n========================================\n")
+cat("SECTION 32 FINISHED\n")
+cat("Successful plots:",
+    sum(plot_results$status == "Success"), "\n")
+cat("Failed plots:",
+    sum(plot_results$status != "Success"), "\n")
+cat("Output folder:",
+    normalizePath(plot_dir), "\n")
+cat("========================================\n")
+
+print(plot_results)
+
+```
+```{r}
+# =========================================================
+# SECTION 32: PUBLICATION-STYLE LANDSAT SCENARIO MAPS
+# =========================================================
+
+library(reticulate)
+library(ggplot2)
+library(png)
+library(grid)
+
+# ---------------------------------------------------------
+# 1. Earth Engine session and output directory
+# ---------------------------------------------------------
+
+ee <- reticulate::import("ee", convert = FALSE)
+ee$Initialize(project = "thinking-leaf-305215")
+
+plot_dir <- "Tharaka_Landsat_Enhanced_Maps"
+
+dir.create(
+  plot_dir,
+  showWarnings = FALSE,
+  recursive = TRUE
+)
+
+# ---------------------------------------------------------
+# 2. Seasonal labels
+# ---------------------------------------------------------
+
+scenario_labels <- c(
+  dry_feb = "February Dry Season (10–20 February)",
+  dry_sep = "September Dry Season (15–25 September)",
+  wet_may = "May Wet Season (5–30 May)",
+  wet_dec = "December Wet Season (5–30 December)"
+)
+
+scenario_names <- names(selected_composites)
+
+if (length(scenario_names) != 16) {
+  stop("Expected 16 scenarios; found ",
+       length(scenario_names), ".")
+}
+
+# ---------------------------------------------------------
+# 3. Processing log
+# ---------------------------------------------------------
+
+plot_results <- data.frame(
+  composite = scenario_names,
+  status = "Pending",
+  file = NA_character_,
+  stringsAsFactors = FALSE
+)
+
+# ---------------------------------------------------------
+# 4. Generate enhanced maps
+# ---------------------------------------------------------
+
+for (i in seq_along(scenario_names)) {
+
+  scenario <- scenario_names[i]
+
+  message(
+    "\nProcessing ", i, " of ",
+    length(scenario_names), ": ", scenario
+  )
+
+  temp_png <- tempfile(fileext = ".png")
+
+  tryCatch({
+
+    img <- selected_composites[[scenario]]
+
+    year <- sub("_.*$", "", scenario)
+    window <- sub("^\\d{4}_", "", scenario)
+
+    if (!window %in% names(scenario_labels)) {
+      stop("Unknown seasonal window: ", window)
+    }
+
+    # -----------------------------------------------------
+    # A. True-colour RGB visualisation
+    # -----------------------------------------------------
+
+    rgb_img <- ee$Image$visualize(
+      img,
+      bands = c("red", "green", "blue"),
+      min = 0.02,
+      max = 0.30,
+      gamma = 1.3
+    )
+
+   # -----------------------------------------------------
+# B. Add ONLY the ROI boundary, keeping the image visible
+# -----------------------------------------------------
+
+roi_fc <- ee$FeatureCollection(
+  ee$Feature(roi)
+)
+
+# Paint the boundary into a blank image
+boundary_img <- ee$Image$constant(0)$byte()$paint(
+  roi_fc, 1, 2
+)
+
+# Mask out all pixels except the painted boundary
+boundary_masked <- boundary_img$updateMask(
+  boundary_img
+)
+
+# Visualise the boundary in white
+boundary_vis <- boundary_masked$visualize(
+  palette = c("FFFFFF"),
+  min = 0,
+  max = 1,
+  opacity = 1
+)
+
+# Overlay the boundary without covering the RGB imagery
+map_img <- rgb_img$blend(boundary_vis)
+
+    # -----------------------------------------------------
+    # C. Download thumbnail
+    # -----------------------------------------------------
+
+    thumb <- map_img$getThumbURL(
+      reticulate::dict(
+        region = roi,
+        dimensions = 1200,
+        format = "png"
+      )
+    )
+
+    thumb_url <- reticulate::py_to_r(thumb)
+
+    download.file(
+      url = thumb_url,
+      destfile = temp_png,
+      mode = "wb",
+      quiet = TRUE
+    )
+
+    raster_img <- png::readPNG(temp_png)
+
+    # -----------------------------------------------------
+    # D. Create framed map
+    # -----------------------------------------------------
+
+    p <- ggplot() +
+
+      annotation_raster(
+        raster_img,
+        xmin = 0, xmax = 1,
+        ymin = 0, ymax = 1
+      ) +
+
+      # North arrow
+      annotate(
+        "segment",
+        x = 0.93, xend = 0.93,
+        y = 0.77, yend = 0.89,
+        linewidth = 0.8,
+        colour = "black",
+        arrow = grid::arrow(
+          length = grid::unit(0.16, "cm"),
+          type = "closed"
+        )
+      ) +
+
+      annotate(
+        "text",
+        x = 0.93, y = 0.93,
+        label = "N",
+        fontface = "bold",
+        size = 4
+      ) +
+
+      # RGB key
+      annotate(
+        "label",
+        x = 0.03, y = 0.97,
+        label = "RGB KEY\nR: Red\nG: Green\nB: Blue",
+        hjust = 0, vjust = 1,
+        size = 3,
+        label.size = 0.3,
+        fill = "white",
+        alpha = 0.92
+      ) +
+
+      coord_fixed(
+        xlim = c(0, 1),
+        ylim = c(0, 1),
+        expand = FALSE
+      ) +
+
+      labs(
+        title = paste(
+          "THARAKA SUB-COUNTY —", year
+        ),
+        subtitle = paste(
+          scenario_labels[[window]],
+          "| Landsat Collection 2 Level-2"
+        ),
+        caption = paste(
+          "True-colour RGB composite | Nominal pixel size: 30 m",
+          "\nWhite line: study-area boundary | RGB stretch for display"
+        )
+      ) +
+
+      theme_void(base_size = 12) +
+
+      theme(
+        plot.title = element_text(
+          face = "bold",
+          size = 16,
+          hjust = 0.5,
+          margin = margin(b = 8)
+        ),
+        plot.subtitle = element_text(
+          size = 10,
+          hjust = 0.5
+        ),
+        plot.caption = element_text(
+          size = 8,
+          hjust = 0.5
+        ),
+        panel.border = element_rect(
+          colour = "black",
+          fill = NA,
+          linewidth = 1
+        ),
+        plot.background = element_rect(
+          fill = "white",
+          colour = NA
+        ),
+        plot.margin = margin(12, 12, 12, 12)
+      )
+
+    # -----------------------------------------------------
+    # E. Save high-resolution PNG
+    # -----------------------------------------------------
+
+    output_file <- file.path(
+      plot_dir,
+      paste0("Tharaka_", scenario, ".png")
+    )
+
+    ggsave(
+      filename = output_file,
+      plot = p,
+      width = 9,
+      height = 7,
+      units = "in",
+      dpi = 300,
+      bg = "white"
+    )
+
+    plot_results$status[i] <- "Success"
+    plot_results$file[i] <- output_file
+
+    message("Saved: ", output_file)
+
+  }, error = function(e) {
+
+    plot_results$status[i] <<- paste(
+      "Failed:", conditionMessage(e)
+    )
+
+    message(
+      "Error for ", scenario, ": ",
+      conditionMessage(e)
+    )
+
+  }, finally = {
+
+    if (file.exists(temp_png)) {
+      unlink(temp_png)
+    }
+
+  })
+}
+
+# ---------------------------------------------------------
+# 5. Save processing log and report
+# ---------------------------------------------------------
+
+write.csv(
+  plot_results,
+  file.path(plot_dir, "Scenario_Plot_Processing_Log.csv"),
+  row.names = FALSE
+)
+
+cat("\n====================================\n")
+cat("ENHANCED MAP EXPORT COMPLETE\n")
+cat("Successful:", sum(plot_results$status == "Success"), "\n")
+cat("Failed:", sum(plot_results$status != "Success"), "\n")
+cat("Output folder:", normalizePath(plot_dir), "\n")
+cat("====================================\n")
+
+print(plot_results)
+
+```
+
+```{r}
+# Select Tharaka-Nithi County robustly
+county <- kenya_counties[
+  grepl(
+    "tharaka",
+    kenya_counties$NAME_1,
+    ignore.case = TRUE
+  ) &
+  grepl(
+    "nithi",
+    kenya_counties$NAME_1,
+    ignore.case = TRUE
+  ),
+]
+
+if (nrow(county) != 1) {
+  stop(
+    "Expected one Tharaka-Nithi County feature, found ",
+    nrow(county),
+    ". Check kenya_counties$NAME_1."
+  )
+}
+
+cat("Selected county:", county$NAME_1, "\n")
+```
+
+
+
+
+
+
+```{r}
+# =========================================================
+# FIX: VALIDATE AND REPAIR STUDY-AREA GEOMETRY
+# =========================================================
+
+# Check the current geometry
+print(sf::st_is_valid(roi_sf, reason = TRUE))
+
+# Repair invalid geometry
+roi_sf <- sf::st_make_valid(roi_sf)
+
+# Keep polygonal components only
+roi_sf <- sf::st_collection_extract(
+  roi_sf,
+  "POLYGON",
+  warn = FALSE
+)
+
+# Confirm validity
+print(sf::st_is_valid(roi_sf))
+
+# Stop only if the geometry remains invalid
+if (!all(sf::st_is_valid(roi_sf))) {
+  stop("The study-area geometry is still invalid. Inspect the geometry.")
+}
+
+cat("Study-area geometry validated successfully.\n")
+```
+
+
+
+```{r}
+# =========================================================
+# SECTION 33A: CHECK STUDY-AREA LOCATION
+# =========================================================
+
+# Check whether the ROI intersects Tharaka-Nithi County
+overlap <- sf::st_intersects(
+  roi_sf,
+  county,
+  sparse = FALSE
+)
+
+print(overlap)
+
+if (all(overlap)) {
+  cat("The study area intersects Tharaka-Nithi County.\n")
+} else {
+  warning(
+    "The study area does not intersect Tharaka-Nithi County. ",
+    "Check the ROI and coordinate reference system."
+  )
+}
+
+# Estimate how much of the ROI lies inside the county
+roi_area <- sf::st_transform(roi_sf, 6933)
+county_area <- sf::st_transform(county, 6933)
+
+inside_area <- sf::st_intersection(
+  roi_area,
+  county_area
+)
+
+overlap_pct <- 100 * sum(sf::st_area(inside_area)) /
+  sum(sf::st_area(roi_area))
+
+cat(
+  "Percentage of study area inside Tharaka-Nithi County:",
+  round(as.numeric(overlap_pct), 2), "%\n"
+)
+```
+
+
+```{r}
+# =========================================================
+# SECTION 33: STUDY-AREA LOCATION MAP
+# Kenya -> Tharaka-Nithi County -> Tharaka study area
+# =========================================================
+
+library(sf)
+library(ggplot2)
+library(geodata)
+library(reticulate)
+library(jsonlite)
+library(geojsonsf)
+library(patchwork)
+
+# ---------------------------------------------------------
+# 1. Output folder
+# ---------------------------------------------------------
+
+locator_dir <- "Tharaka_Land_Cover_Results"
+dir.create(locator_dir, showWarnings = FALSE, recursive = TRUE)
+
+boundary_dir <- file.path(locator_dir, "Administrative_Boundaries")
+dir.create(boundary_dir, showWarnings = FALSE, recursive = TRUE)
+
+# ---------------------------------------------------------
+# 2. Download GADM administrative boundaries
+# ---------------------------------------------------------
+
+kenya_counties <- sf::st_as_sf(
+  geodata::gadm(
+    country = "KEN",
+    level = 1,
+    path = boundary_dir
+  )
+)
+
+kenya_country <- sf::st_as_sf(
+  geodata::gadm(
+    country = "KEN",
+    level = 0,
+    path = boundary_dir
+  )
+)
+
+# Inspect county names if necessary
+print(sort(unique(kenya_counties$NAME_1)))
+
+# Select Tharaka-Nithi County robustly
+county <- kenya_counties[
+  grepl(
+    "tharaka",
+    kenya_counties$NAME_1,
+    ignore.case = TRUE
+  ) &
+  grepl(
+    "nithi",
+    kenya_counties$NAME_1,
+    ignore.case = TRUE
+  ),
+]
+
+if (nrow(county) != 1) {
+  stop(
+    "Expected one Tharaka-Nithi County feature, found ",
+    nrow(county),
+    ". Check kenya_counties$NAME_1."
+  )
+}
+
+cat("Selected county:", county$NAME_1, "\n")
+
+
+# ---------------------------------------------------------
+# 3. Convert Earth Engine ROI to sf and repair its geometry
+# ---------------------------------------------------------
+
+ee <- reticulate::import("ee", convert = FALSE)
+
+# Extract the ROI already used in the Landsat analysis
+roi_info <- reticulate::py_to_r(
+  ee$Feature(roi)$getInfo()
+)
+
+roi_feature <- list(
+  type = "Feature",
+  properties = list(name = "Tharaka study area"),
+  geometry = roi_info$geometry
+)
+
+roi_json <- jsonlite::toJSON(
+  roi_feature,
+  auto_unbox = TRUE,
+  null = "null"
+)
+
+roi_sf <- geojsonsf::geojson_sf(roi_json)
+
+# Set coordinate reference systems consistently
+county <- sf::st_transform(county, 4326)
+kenya_counties <- sf::st_transform(kenya_counties, 4326)
+kenya_country <- sf::st_transform(kenya_country, 4326)
+roi_sf <- sf::st_transform(roi_sf, 4326)
+
+# Repair the geometry AFTER recreating roi_sf
+cat("Original geometry validity:\n")
+print(sf::st_is_valid(roi_sf, reason = TRUE))
+
+roi_sf <- sf::st_make_valid(roi_sf)
+
+# Keep polygonal geometry; if already polygonal, no extraction is needed
+if (!all(sf::st_is_valid(roi_sf))) {
+  roi_sf <- sf::st_collection_extract(
+    roi_sf, "POLYGON", warn = FALSE
+  )
+}
+
+# Confirm the final geometry
+valid_roi <- sf::st_is_valid(roi_sf)
+
+if (!all(valid_roi)) {
+  stop("ROI geometry remains invalid after repair.")
+}
+
+if (nrow(roi_sf) == 0) {
+  stop("No valid polygon remains in roi_sf.")
+}
+
+cat("Study-area geometry validated successfully.\n")
+
+# Verify the study area still overlaps the intended county
+overlap <- sf::st_intersects(
+  roi_sf, county, sparse = FALSE
+)
+
+if (!all(overlap)) {
+  warning("The ROI does not intersect Tharaka-Nithi County.")
+}
+
+# Calculate percentage of ROI inside the county
+roi_area <- sf::st_transform(roi_sf, 6933)
+county_area <- sf::st_transform(county, 6933)
+
+inside_area <- sf::st_intersection(
+  roi_area, county_area
+)
+
+overlap_pct <- 100 *
+  sum(sf::st_area(inside_area)) /
+  sum(sf::st_area(roi_area))
+
+cat(
+  "Percentage of study area inside Tharaka-Nithi County:",
+  round(as.numeric(overlap_pct), 2), "%\n"
+)
+
+# ---------------------------------------------------------
+# 4. Create map 1: Kenya with county highlighted
+# ---------------------------------------------------------
+
+p_kenya <- ggplot() +
+  geom_sf(
+    data = kenya_country,
+    fill = "#F7F7F7",
+    colour = "#444444",
+    linewidth = 0.35
+  ) +
+  geom_sf(
+    data = kenya_counties,
+    fill = NA,
+    colour = "#B7B7B7",
+    linewidth = 0.2
+  ) +
+  geom_sf(
+    data = county,
+    fill = "#E76F51",
+    colour = "#8C2D04",
+    linewidth = 0.65
+  ) +
+  labs(
+    title = "KENYA",
+    subtitle = "Tharaka-Nithi County highlighted"
+  ) +
+  coord_sf(expand = FALSE) +
+  theme_void(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, size = 9),
+    panel.border = element_rect(
+      colour = "black", fill = NA, linewidth = 0.7
+    )
+  )
+
+# ---------------------------------------------------------
+# 5. Create map 2: County with study area highlighted
+# ---------------------------------------------------------
+
+county_bbox <- sf::st_bbox(county)
+
+county_x <- c(
+  unname(county_bbox["xmin"]) - 0.12,
+  unname(county_bbox["xmax"]) + 0.12
+)
+
+county_y <- c(
+  unname(county_bbox["ymin"]) - 0.08,
+  unname(county_bbox["ymax"]) + 0.08
+)
+
+p_county <- ggplot() +
+  geom_sf(
+    data = county,
+    fill = "#E9E9E9",
+    colour = "#333333",
+    linewidth = 0.8
+  ) +
+  geom_sf(
+    data = roi_sf,
+    fill = "#65A765",
+    colour = "#185C37",
+    linewidth = 0.8
+  ) +
+  labs(
+    title = "THARAKA-NITHI COUNTY",
+    subtitle = "Tharaka study area highlighted"
+  ) +
+  coord_sf(
+    xlim = county_x,
+    ylim = county_y,
+    expand = FALSE
+  ) +
+  theme_void(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, size = 9),
+    panel.border = element_rect(
+      colour = "black", fill = NA, linewidth = 0.7
+    )
+  )
+
+# ---------------------------------------------------------
+# 6. Create map 3: Detailed study-area boundary
+# ---------------------------------------------------------
+
+roi_bbox <- sf::st_bbox(roi_sf)
+
+roi_x <- c(
+  unname(roi_bbox["xmin"]) - 0.025,
+  unname(roi_bbox["xmax"]) + 0.025
+)
+
+roi_y <- c(
+  unname(roi_bbox["ymin"]) - 0.025,
+  unname(roi_bbox["ymax"]) + 0.025
+)
+
+p_detail <- ggplot() +
+  geom_sf(
+    data = roi_sf,
+    fill = "#A8D5BA",
+    colour = "#185C37",
+    linewidth = 0.9
+  ) +
+  labs(
+    title = "THARAKA STUDY AREA",
+    subtitle = "Boundary used in the Landsat analysis"
+  ) +
+  coord_sf(
+    xlim = roi_x,
+    ylim = roi_y,
+    expand = FALSE
+  ) +
+  theme_void(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, size = 9),
+    panel.border = element_rect(
+      colour = "black", fill = NA, linewidth = 0.7
+    )
+  )
+
+# ---------------------------------------------------------
+# 7. Combine the three maps
+# ---------------------------------------------------------
+
+p_locator_0 <- (p_kenya | p_county | p_detail) +
+  plot_layout(widths = c(1, 1, 1.1)) +
+  plot_annotation(
+    title = "Location of the Tharaka Study Area, Kenya",
+    subtitle = paste(
+      "Geographic context for the 2000, 2010, 2020 and 2025",
+      "seasonal Landsat analysis"
+    ),
+    caption = paste(
+      "Administrative boundaries: GADM.",
+      "Study boundary: ROI used in the Earth Engine analysis."
+    ),
+    theme = theme(
+      plot.title = element_text(
+        size = 17, face = "bold", hjust = 0.5
+      ),
+      plot.subtitle = element_text(
+        size = 11, hjust = 0.5
+      ),
+      plot.caption = element_text(size = 8, hjust = 0)
+    )
+  )
+
+print(p_locator_0)
+
+# ---------------------------------------------------------
+# 8. Export publication-quality files
+# ---------------------------------------------------------
+
+
+# ---------------------------------------------------------
+# SAVE LOCATOR MAP IN THE EXISTING MAP DIRECTORY
+# ---------------------------------------------------------
+
+plot_dir <- "Tharaka_Landsat_Enhanced_Maps"
+
+dir.create(
+  plot_dir,
+  showWarnings = FALSE,
+  recursive = TRUE
+)
+
+# Save high-resolution PNG
+ggsave(
+  filename = file.path(
+    plot_dir,
+    "Tharaka_Study_Area_Location_Map.png"
+  ),
+  plot = p_locator_0,
+  width = 15,
+  height = 7,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+
+# Save publication-quality PDF
+ggsave(
+  filename = file.path(
+    plot_dir,
+    "Tharaka_Study_Area_Location_Map.pdf"
+  ),
+  plot = p_locator_0,
+  width = 15,
+  height = 7,
+  units = "in",
+  bg = "white"
+)
+
+# Display the map
+print(p_locator_0)
+
+cat(
+  "\nLocator maps saved successfully in:\n",
+  normalizePath(plot_dir),
+  "\n"
+)
+
+
+
+```
+
+```{r}
+
+# =========================================================
+# SECTION 33B: LOCATOR MAP WITH KEY AND NORTH COMPASS
+# =========================================================
+
+library(ggplot2)
+library(sf)
+library(patchwork)
+library(ggspatial)
+
+# ---------------------------------------------------------
+# 1. Kenya overview
+# ---------------------------------------------------------
+
+p_kenya <- ggplot() +
+  geom_sf(
+    data = kenya_country,
+    fill = "#F7F7F7",
+    colour = "#444444",
+    linewidth = 0.4
+  ) +
+  geom_sf(
+    data = kenya_counties,
+    fill = NA,
+    colour = "#B7B7B7",
+    linewidth = 0.2
+  ) +
+  geom_sf(
+    data = county,
+    aes(fill = "Tharaka-Nithi County"),
+    colour = "#8C2D04",
+    linewidth = 0.7
+  ) +
+  scale_fill_manual(
+    name = "Map key",
+    values = c("Tharaka-Nithi County" = "#E76F51")
+  ) +
+  labs(
+    title = "KENYA",
+    subtitle = "Study county highlighted"
+  ) +
+  coord_sf(expand = FALSE) +
+  theme_void() +
+  theme(
+    plot.title = element_text(
+      face = "bold", size = 12, hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      size = 9, hjust = 0.5
+    ),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold", size = 8),
+    legend.text = element_text(size = 8),
+    legend.key.size = grid::unit(0.35, "cm")
+  )
+
+# ---------------------------------------------------------
+# 2. County-level view
+# ---------------------------------------------------------
+
+county_bbox <- sf::st_bbox(county)
+
+county_x <- c(
+  as.numeric(county_bbox["xmin"]) - 0.12,
+  as.numeric(county_bbox["xmax"]) + 0.12
+)
+
+county_y <- c(
+  as.numeric(county_bbox["ymin"]) - 0.08,
+  as.numeric(county_bbox["ymax"]) + 0.08
+)
+
+p_county <- ggplot() +
+  geom_sf(
+    data = county,
+    fill = "#E9E9E9",
+    colour = "#333333",
+    linewidth = 0.8
+  ) +
+  geom_sf(
+    data = roi_sf,
+    aes(fill = "Tharaka study area"),
+    colour = "#185C37",
+    linewidth = 0.8
+  ) +
+  scale_fill_manual(
+    name = "Map key",
+    values = c("Tharaka study area" = "#65A765")
+  ) +
+  labs(
+    title = "THARAKA-NITHI COUNTY",
+    subtitle = "Study boundary highlighted"
+  ) +
+  coord_sf(
+    xlim = county_x,
+    ylim = county_y,
+    expand = FALSE
+  ) +
+  theme_void() +
+  theme(
+    plot.title = element_text(
+      face = "bold", size = 12, hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      size = 9, hjust = 0.5
+    ),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold", size = 8),
+    legend.text = element_text(size = 8),
+    legend.key.size = grid::unit(0.35, "cm")
+  )
+
+# ---------------------------------------------------------
+# 3. Detailed study-area view with north compass
+# ---------------------------------------------------------
+
+roi_bbox <- sf::st_bbox(roi_sf)
+
+roi_x <- c(
+  as.numeric(roi_bbox["xmin"]) - 0.025,
+  as.numeric(roi_bbox["xmax"]) + 0.025
+)
+
+roi_y <- c(
+  as.numeric(roi_bbox["ymin"]) - 0.025,
+  as.numeric(roi_bbox["ymax"]) + 0.025
+)
+
+p_detail <- ggplot() +
+  geom_sf(
+    data = roi_sf,
+    aes(fill = "Study-area boundary"),
+    colour = "#185C37",
+    linewidth = 0.9
+  ) +
+  scale_fill_manual(
+    name = "Map key",
+    values = c("Study-area boundary" = "#A8D5BA")
+  ) +
+  # North arrow / compass
+  ggspatial::annotation_north_arrow(
+    location = "tr",
+    which_north = "true",
+    height = grid::unit(1.0, "cm"),
+    width = grid::unit(0.8, "cm"),
+    style = ggspatial::north_arrow_fancy_orienteering
+  ) +
+  labs(
+    title = "THARAKA STUDY AREA",
+    subtitle = "Boundary used in the Landsat analysis"
+  ) +
+  coord_sf(
+    xlim = roi_x,
+    ylim = roi_y,
+    expand = FALSE
+  ) +
+  theme_void() +
+  theme(
+    plot.title = element_text(
+      face = "bold", size = 12, hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      size = 9, hjust = 0.5
+    ),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold", size = 8),
+    legend.text = element_text(size = 8),
+    legend.key.size = grid::unit(0.35, "cm")
+  )
+
+# ---------------------------------------------------------
+# 4. Combine the three panels
+# ---------------------------------------------------------
+
+p_locator <- (p_kenya | p_county | p_detail) +
+  plot_layout(widths = c(1, 1, 1.1), guides = "collect") +
+  plot_annotation(
+    title = "Location of the Tharaka Study Area, Kenya",
+    subtitle = paste(
+      "Geographic context for the 2000, 2010, 2020",
+      "and 2025 seasonal Landsat analysis"
+    ),
+    caption = paste(
+      "Administrative boundaries: GADM.",
+      "Study boundary: ROI used in Google Earth Engine."
+    ),
+    theme = theme(
+      plot.title = element_text(
+        face = "bold", size = 16, hjust = 0.5
+      ),
+      plot.subtitle = element_text(
+        size = 10, hjust = 0.5
+      ),
+      plot.caption = element_text(
+        size = 8, hjust = 0.5
+      ),
+      legend.position = "bottom"
+    )
+  )
+
+# ---------------------------------------------------------
+# 5. Save high-resolution outputs
+# ---------------------------------------------------------
+
+locator_dir <- "Tharaka_Land_Cover_Results"
+dir.create(locator_dir, showWarnings = FALSE, recursive = TRUE)
+
+ggsave(
+  file.path(locator_dir, "Tharaka_Study_Area_Location_Map.png"),
+  plot = p_locator,
+  width = 15,
+  height = 7,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+
+ggsave(
+  file.path(locator_dir, "Tharaka_Study_Area_Location_Map.pdf"),
+  plot = p_locator,
+  width = 15,
+  height = 7,
+  units = "in",
+  bg = "white"
+)
+
+print(p_locator)
+
+cat("Locator map saved as PNG and PDF.\n")
+
+```
+```{r}
+
+# ---------------------------------------------------------
+# SAVE BOTH LOCATOR MAP VERSIONS IN THE SAME DIRECTORY
+# ---------------------------------------------------------
+
+plot_dir <- "Tharaka_Landsat_Enhanced_Maps"
+
+dir.create(
+  plot_dir,
+  showWarnings = FALSE,
+  recursive = TRUE
+)
+
+# =========================================================
+# MAP 1: ORIGINAL LOCATOR MAP (p_locator)
+# =========================================================
+
+ggsave(
+  filename = file.path(
+    plot_dir,
+    "Tharaka_Study_Area_Location_Map_Original.png"
+  ),
+  plot = p_locator,
+  width = 15,
+  height = 7,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+
+ggsave(
+  filename = file.path(
+    plot_dir,
+    "Tharaka_Study_Area_Location_Map_Original.pdf"
+  ),
+  plot = p_locator,
+  width = 15,
+  height = 7,
+  units = "in",
+  bg = "white"
+)
+
+# =========================================================
+# MAP 2: UPDATED LOCATOR MAP (p_locator_0)
+# =========================================================
+
+ggsave(
+  filename = file.path(
+    plot_dir,
+    "Tharaka_Study_Area_Location_Map_Compass_Key.png"
+  ),
+  plot = p_locator_0,
+  width = 15,
+  height = 7,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+
+ggsave(
+  filename = file.path(
+    plot_dir,
+    "Tharaka_Study_Area_Location_Map_Compass_Key.pdf"
+  ),
+  plot = p_locator_0,
+  width = 15,
+  height = 7,
+  units = "in",
+  bg = "white"
+)
+
+# Display the updated map
+print(p_locator_0)
+
+cat(
+  "\nBoth locator map versions saved successfully in:\n",
+  normalizePath(plot_dir),
+  "\n"
+)
+
+```
+
+
 
 # 11. Next analytical stage
 

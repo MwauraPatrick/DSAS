@@ -1,0 +1,17 @@
+composite,year,records_returned,unique_points,missing_NDVI
+2000_dry_feb,2000,50,50,0
+2000_dry_sep,2000,50,50,0
+2000_wet_dec,2000,44,44,0
+2000_wet_may,2000,44,44,0
+2010_dry_feb,2010,47,47,0
+2010_dry_sep,2010,48,48,0
+2010_wet_dec,2010,47,47,0
+2010_wet_may,2010,46,46,0
+2020_dry_feb,2020,45,45,0
+2020_dry_sep,2020,45,45,0
+2020_wet_dec,2020,49,49,0
+2020_wet_may,2020,50,50,0
+2025_dry_feb,2025,50,50,0
+2025_dry_sep,2025,45,45,0
+2025_wet_dec,2025,46,46,0
+2025_wet_may,2025,50,50,0
