@@ -6,6 +6,7 @@ output:
   pdf_document:
     toc: true
     number_sections: true
+always_allow_html: true
 ---
 
 ```{r setup, include=FALSE}
@@ -6119,6 +6120,70 @@ cat(
 ```
 
 
+```{r}
+# =========================================================
+# DIAGNOSTIC: VERIFY MODIS URBAN / BUILT-UP PIXELS
+# =========================================================
+
+settlement_pixel_check <- purrr::map_dfr(
+  seq_len(nrow(landcover_year_map)),
+  function(i) {
+
+    requested_year <- landcover_year_map$requested_year[i]
+    dataset_year <- landcover_year_map$dataset_year[i]
+
+    annual_collection <- ee_method(
+      modis_lc_collection,
+      "filterDate",
+      sprintf("%04d-01-01", dataset_year),
+      sprintf("%04d-01-01", dataset_year + 1L)
+    )
+
+    image <- ee_method(annual_collection, "first")
+    lc <- ee_method(image, "select", "LC_Type1")
+
+    # IGBP class 13 = urban and built-up
+    urban_mask <- ee_method(lc, "eq", 13L)
+    urban_mask <- ee_method(urban_mask, "selfMask")
+    urban_mask <- ee_method(urban_mask, "rename", "urban_pixel")
+
+    count_result <- ee_method(
+      urban_mask,
+      "reduceRegion",
+      reducer = ee$Reducer$count(),
+      geometry = roi,
+      scale = 500,
+      maxPixels = 1e10,
+      tileScale = 4
+    )
+
+    count_info <- ee_get_info(count_result)
+    pixel_count <- count_info[["urban_pixel"]]
+
+    tibble::tibble(
+      requested_year = requested_year,
+      dataset_year = dataset_year,
+      urban_class_pixels = if (is.null(pixel_count)) {
+        0
+      } else {
+        as.numeric(pixel_count)
+      }
+    )
+  }
+)
+
+print(settlement_pixel_check, n = Inf)
+
+readr::write_csv(
+  settlement_pixel_check,
+  file.path(
+    results_dir,
+    "Tharaka_MODIS_Urban_Pixel_Diagnostic.csv"
+  )
+)
+```
+
+
 
 
 # 34. Preliminary land-cover trends using a published annual product
@@ -6126,6 +6191,7 @@ cat(
 These sections provide a **preliminary screening analysis without requiring the historical reference-label worksheet**. They summarise the MODIS MCD12Q1 Version 6.1 annual IGBP land-cover product in Google Earth Engine. The product has a nominal 500 m pixel size. The code checks whether the 2025 image is available in your Earth Engine catalogue; if it is not, it uses 2024 as a clearly labelled proxy for 2025. The available 2001 map is used as a proxy for requested 2000. These results are not a locally trained 30 m Landsat classification. See the [official Earth Engine data catalogue](https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MCD12Q1) and the [NASA LP DAAC update on 2025 product processing](https://forum.earthdata.nasa.gov/viewtopic.php?p=26716&sid=68f5cd00c1d40c78654c9c4850edcc0d).
 
 The IGBP crosswalk used below is: Forest (codes 1–5), Bushland/shrub-savanna (6–9), Grassland (10), Agriculture (12 and 14), Settlement/urban built-up (13), and Other/non-target (11 and 15–17). Class definitions are broad and should be interpreted at the product's native scale.
+
 
 ```{r section-34-modis-area-estimation, message=FALSE, warning=TRUE}
 # =========================================================
@@ -6303,28 +6369,63 @@ observed_area_long <- bind_rows(area_results)
 
 # Explicit zeroes are assigned only to one of the known valid, grouped classes
 # absent from a particular year's grouped result.
+# ---------------------------------------------------------
+# Build complete annual land-cover area table
+# ---------------------------------------------------------
+
 landcover_area_trends <- tidyr::crossing(
   landcover_year_map,
   land_cover_class = class_levels
 ) %>%
   left_join(
     observed_area_long,
-    by = c("requested_year", "dataset_year", "land_cover_class")
-  ) %>%
-  mutate(area_ha = tidyr::replace_na(area_ha, 0)) %>%
-  group_by(requested_year, dataset_year, year_note) %>%
-  mutate(
-    total_mapped_area_ha = sum(area_ha, na.rm = TRUE),
-    area_pct = if_else(total_mapped_area_ha > 0, 100 * area_ha / total_mapped_area_ha, NA_real_),
-    estimated_study_area_ha = study_area_area_ha,
-    mapped_area_pct_of_study_area = if_else(
-      !is.na(study_area_area_ha) & study_area_area_ha > 0,
-      100 * total_mapped_area_ha / study_area_area_ha,
-      NA_real_
+    by = c(
+      "requested_year",
+      "dataset_year",
+      "land_cover_class"
     )
   ) %>%
+  mutate(
+    area_ha = tidyr::replace_na(area_ha, 0)
+  ) %>%
+  group_by(
+    requested_year,
+    dataset_year,
+    year_note
+  ) %>%
+  mutate(
+    # Total area represented by classified MODIS pixels
+    total_mapped_area_ha = sum(
+      area_ha,
+      na.rm = TRUE
+    ),
+
+    # Percentage share of the mapped land-cover area
+    area_pct = if_else(
+      total_mapped_area_ha > 0,
+      100 * area_ha / total_mapped_area_ha,
+      NA_real_
+    ),
+
+    # Area of the complete study boundary
+    estimated_study_area_ha = study_area_area_ha,
+
+    # Percentage of study area covered by valid mapped pixels
+    # The scalar if() condition avoids if_else() recycling errors.
+    mapped_area_pct_of_study_area = if (
+      is.finite(study_area_area_ha) &&
+      study_area_area_ha > 0
+    ) {
+      100 * total_mapped_area_ha / study_area_area_ha
+    } else {
+      NA_real_
+    }
+  ) %>%
   ungroup() %>%
-  arrange(dataset_year, match(land_cover_class, class_levels))
+  arrange(
+    dataset_year,
+    match(land_cover_class, class_levels)
+  )
 
 readr::write_csv(
   landcover_area_trends,
@@ -6358,102 +6459,302 @@ The decision-screening table compares the first and last source years actually s
 
 ```{r section-35-landcover-tables-decision, message=FALSE, warning=TRUE}
 # =========================================================
-# SECTION 35: TABLES + DECISION-SCREENING METRICS
+# SECTION 35: IMPROVED LAND-COVER TRENDS AND DECISION TABLE
+# Requires: landcover_area_trends, landcover_year_map
 # =========================================================
 
-# Detailed long table for all mapped classes, with source and proxy year notes.
-landcover_trends_table_long <- landcover_area_trends %>%
-  select(
-    requested_period = requested_year,
-    dataset_year,
-    year_note,
-    land_cover_class,
-    area_ha,
-    area_pct,
-    total_mapped_area_ha,
-    mapped_area_pct_of_study_area
-  ) %>%
-  arrange(dataset_year, match(land_cover_class, class_levels))
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(readr)
+library(stringr)
 
-# Wide tables requested by the collaborator: hectares and percentages.
-landcover_trends_table_wide_ha <- landcover_trends_table_long %>%
-  select(requested_period, dataset_year, year_note, land_cover_class, area_ha) %>%
-  pivot_wider(names_from = land_cover_class, values_from = area_ha, names_prefix = "ha_") %>%
-  arrange(dataset_year)
+class_levels <- c(
+  "Forest",
+  "Bushland / shrub-savanna",
+  "Grassland",
+  "Agriculture",
+  "Settlement",
+  "Other / non-target"
+)
 
-landcover_trends_table_wide_pct <- landcover_trends_table_long %>%
-  select(requested_period, dataset_year, year_note, land_cover_class, area_pct) %>%
-  pivot_wider(names_from = land_cover_class, values_from = area_pct, names_prefix = "pct_") %>%
-  arrange(dataset_year)
-
-readr::write_csv(landcover_trends_table_long,
-                 file.path(results_dir, "Tharaka_Landcover_Trends_Table_Long.csv"))
-readr::write_csv(landcover_trends_table_wide_ha,
-                 file.path(results_dir, "Tharaka_Landcover_Trends_Table_Hectares.csv"))
-readr::write_csv(landcover_trends_table_wide_pct,
-                 file.path(results_dir, "Tharaka_Landcover_Trends_Table_Percent.csv"))
-
-# Decision-screening threshold: review changes >= 2 percentage points.
-# This is a configurable flag for follow-up, not a statistical-significance threshold.
-decision_threshold_pp <- 2
-
-landcover_decision_summary <- landcover_trends_table_long %>%
-  arrange(dataset_year) %>%
-  group_by(land_cover_class) %>%
-  summarise(
-    baseline_source_year = first(dataset_year),
-    endpoint_source_year = last(dataset_year),
-    baseline_area_ha = first(area_ha),
-    endpoint_area_ha = last(area_ha),
-    net_area_change_ha = last(area_ha) - first(area_ha),
-    relative_area_change_pct = if_else(
-      first(area_ha) > 0,
-      100 * (last(area_ha) - first(area_ha)) / first(area_ha),
-      NA_real_
-    ),
-    baseline_share_pct = first(area_pct),
-    endpoint_share_pct = last(area_pct),
-    share_change_percentage_points = last(area_pct) - first(area_pct),
-    average_net_change_ha_per_year = if_else(
-      last(dataset_year) > first(dataset_year),
-      (last(area_ha) - first(area_ha)) / (last(dataset_year) - first(dataset_year)),
-      NA_real_
-    ),
-    .groups = "drop"
-  ) %>%
+trend_plot_data <- landcover_area_trends %>%
   mutate(
-    net_area_direction = case_when(
-      net_area_change_ha > 0 ~ "Increase",
-      net_area_change_ha < 0 ~ "Decrease",
-      TRUE ~ "No net change"
-    ),
-    decision_screen_flag = if_else(
-      abs(share_change_percentage_points) >= decision_threshold_pp,
-      paste0("Review: absolute share change >= ", decision_threshold_pp, " pp"),
-      paste0("Below ", decision_threshold_pp, " pp screening threshold")
+    requested_year = as.integer(requested_year),
+    dataset_year = as.integer(dataset_year),
+    land_cover_class = factor(
+      land_cover_class,
+      levels = class_levels
+    )
+  )
+
+# Label proxy years with an asterisk.
+year_breaks <- landcover_year_map$requested_year
+
+year_labels <- ifelse(
+  landcover_year_map$requested_year !=
+    landcover_year_map$dataset_year,
+  paste0(landcover_year_map$requested_year, "*"),
+  as.character(landcover_year_map$requested_year)
+)
+
+proxy_notes <- landcover_year_map %>%
+  filter(requested_year != dataset_year) %>%
+  transmute(
+    note = paste0(
+      requested_year, "* uses source year ", dataset_year
     )
   ) %>%
-  arrange(match(land_cover_class, class_levels))
+  pull(note)
 
-readr::write_csv(
-  landcover_decision_summary,
-  file.path(results_dir, "Tharaka_Landcover_Baseline_Endpoint_Decision_Table.csv")
+proxy_caption <- if (length(proxy_notes) > 0) {
+  paste(proxy_notes, collapse = "; ")
+} else {
+  "All requested years have matching source years."
+}
+
+figure_caption <- stringr::str_wrap(
+  paste(
+    "Source: MODIS MCD12Q1 IGBP, nominal 500 m resolution.",
+    proxy_caption,
+    "Each panel has an independent y-axis.",
+    "Zero mapped settlement does not establish absence of settlements."
+  ),
+  width = 130
 )
 
-cat("\nLand-cover trends by requested class (hectares):\n")
-print(
-  landcover_trends_table_wide_ha %>%
-    select(requested_period, dataset_year, year_note, any_of(paste0("ha_", requested_classes))),
-  n = Inf, width = Inf
+# ---------------------------------------------------------
+# 35.1 Area in hectares
+# ---------------------------------------------------------
+
+p_area <- ggplot(
+  trend_plot_data,
+  aes(
+    x = requested_year,
+    y = area_ha,
+    colour = land_cover_class,
+    group = land_cover_class
+  )
+) +
+  geom_line(linewidth = 0.8, na.rm = TRUE) +
+  geom_point(size = 2.4, na.rm = TRUE) +
+  facet_wrap(
+    ~land_cover_class,
+    scales = "free_y",
+    ncol = 2
+  ) +
+  scale_x_continuous(
+    breaks = year_breaks,
+    labels = year_labels,
+    expand = expansion(mult = c(0.04, 0.04))
+  ) +
+  scale_y_continuous(
+    labels = scales::label_comma(accuracy = 1),
+    limits = c(0, NA),
+    expand = expansion(mult = c(0, 0.15), add = c(0, 1))
+  ) +
+  labs(
+    title = "Land-cover area trends in Tharaka Sub-county",
+    subtitle = "Estimated area in hectares by land-cover class",
+    x = "Requested comparison year (* = proxy source year)",
+    y = "Estimated area (ha)",
+    caption = figure_caption
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(
+      face = "bold", size = 16
+    ),
+    plot.subtitle = element_text(size = 11),
+    strip.text = element_text(
+      face = "bold", size = 11
+    ),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(colour = "grey20"),
+    legend.position = "none",
+    plot.caption = element_text(
+      size = 8, hjust = 0, lineheight = 1.15
+    ),
+    plot.caption.position = "plot",
+    plot.margin = margin(12, 18, 12, 12)
+  )
+
+print(p_area)
+
+ggsave(
+  file.path(
+    results_dir,
+    "Tharaka_Landcover_Area_Trends_Clear.png"
+  ),
+  p_area,
+  width = 12,
+  height = 10,
+  units = "in",
+  dpi = 300,
+  bg = "white"
 )
-cat("\nLand-cover trends by requested class (% of mapped area):\n")
-print(
-  landcover_trends_table_wide_pct %>%
-    select(requested_period, dataset_year, year_note, any_of(paste0("pct_", requested_classes))),
-  n = Inf, width = Inf
+
+ggsave(
+  file.path(
+    results_dir,
+    "Tharaka_Landcover_Area_Trends_Clear.pdf"
+  ),
+  p_area,
+  width = 12,
+  height = 10,
+  units = "in",
+  bg = "white"
 )
-cat("\nBaseline-to-endpoint decision-screening summary (all classes):\n")
-print(landcover_decision_summary, n = Inf, width = Inf)
+
+# ---------------------------------------------------------
+# 35.2 Percentage share
+# ---------------------------------------------------------
+
+p_share <- ggplot(
+  trend_plot_data,
+  aes(
+    x = requested_year,
+    y = area_pct,
+    colour = land_cover_class,
+    group = land_cover_class
+  )
+) +
+  geom_line(linewidth = 0.8, na.rm = TRUE) +
+  geom_point(size = 2.4, na.rm = TRUE) +
+  facet_wrap(
+    ~land_cover_class,
+    scales = "free_y",
+    ncol = 2
+  ) +
+  scale_x_continuous(
+    breaks = year_breaks,
+    labels = year_labels,
+    expand = expansion(mult = c(0.04, 0.04))
+  ) +
+  scale_y_continuous(
+    labels = scales::label_number(
+      accuracy = 0.1,
+      suffix = "%"
+    ),
+    limits = c(0, NA),
+    expand = expansion(mult = c(0, 0.15), add = c(0, 0.1))
+  ) +
+  labs(
+    title = "Land-cover composition trends in Tharaka Sub-county",
+    subtitle = "Percentage of the mapped land-cover area",
+    x = "Requested comparison year (* = proxy source year)",
+    y = "Share of mapped area (%)",
+    caption = figure_caption
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(
+      face = "bold", size = 16
+    ),
+    plot.subtitle = element_text(size = 11),
+    strip.text = element_text(
+      face = "bold", size = 11
+    ),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(colour = "grey20"),
+    legend.position = "none",
+    plot.caption = element_text(
+      size = 8, hjust = 0, lineheight = 1.15
+    ),
+    plot.caption.position = "plot",
+    plot.margin = margin(12, 18, 12, 12)
+  )
+
+print(p_share)
+
+ggsave(
+  file.path(
+    results_dir,
+    "Tharaka_Landcover_Share_Trends_Clear.png"
+  ),
+  p_share,
+  width = 12,
+  height = 10,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+
+ggsave(
+  file.path(
+    results_dir,
+    "Tharaka_Landcover_Share_Trends_Clear.pdf"
+  ),
+  p_share,
+  width = 12,
+  height = 10,
+  units = "in",
+  bg = "white"
+)
+
+# ---------------------------------------------------------
+# 35.3 Baseline-to-latest-year decision table
+# ---------------------------------------------------------
+
+decision_table <- trend_plot_data %>%
+  filter(requested_year %in% c(2000L, 2025L)) %>%
+  select(
+    land_cover_class,
+    requested_year,
+    dataset_year,
+    area_ha,
+    area_pct
+  ) %>%
+  pivot_wider(
+    names_from = requested_year,
+    values_from = c(area_ha, area_pct),
+    names_glue = "{.value}_{requested_year}"
+  ) %>%
+  mutate(
+    net_area_change_ha = area_ha_2025 - area_ha_2000,
+
+    relative_area_change_pct = if_else(
+      area_ha_2000 > 0,
+      100 * net_area_change_ha / area_ha_2000,
+      NA_real_
+    ),
+
+    share_change_percentage_points =
+      area_pct_2025 - area_pct_2000,
+
+    decision_flag = case_when(
+      land_cover_class == "Settlement" &
+        area_ha_2000 == 0 &
+        area_ha_2025 == 0 ~
+        "No MODIS urban class mapped; verify using finer-resolution data",
+
+      abs(share_change_percentage_points) >= 2 ~
+        "Flag for spatial validation: change of at least 2 percentage points",
+
+      TRUE ~
+        "No change of at least 2 percentage points under this screening rule"
+    )
+  ) %>%
+  arrange(
+    match(land_cover_class, class_levels)
+  )
+
+print(decision_table, n = Inf, width = Inf)
+
+write_csv(
+  decision_table,
+  file.path(
+    results_dir,
+    "Tharaka_Landcover_Decision_Table.csv"
+  )
+)
+
+cat(
+  "\nSection 35 completed. Graphs and decision table saved in: ",
+  normalizePath(results_dir, winslash = "/"),
+  "\n",
+  sep = ""
+)
 ```
 
 # 36. Decision-useful trends graphs

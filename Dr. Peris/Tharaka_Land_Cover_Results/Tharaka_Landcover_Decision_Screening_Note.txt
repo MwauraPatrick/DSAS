@@ -1,0 +1,21 @@
+THARAKA SUB-COUNTY: PRELIMINARY LAND-COVER TREND SCREENING
+===========================================================
+Source: MODIS MCD12Q1 Version 6.1, IGBP LC_Type1, nominal 500 m pixels.
+Requested-year mapping: requested 2000 uses source year 2001; requested 2025 uses source year 2024.
+These are product-derived area estimates, not locally accuracy-assessed Landsat classifications.
+
+Decision-screening threshold: absolute class-share change >= 2 percentage points.
+This threshold is a configurable follow-up flag, not a statistical test.
+
+BASELINE-TO-ENDPOINT CLASS CHANGES (source years 2001 to 2024):
+No class crossed the configured share-change screening threshold.
+
+MAPPED-AREA COVERAGE CHECK (screening threshold: 95% of boundary area):
+No source year fell below the 95% mapped-area screening threshold, or coverage could not be computed.
+
+RECOMMENDED USE:
+1. Use the output as a broad screening view of class composition and candidate changes.
+2. Inspect flagged classes on maps and confirm them using higher-resolution imagery and local knowledge.
+3. Treat settlement and small fragmented patches especially cautiously: a 500 m product is too coarse for parcel- or village-scale decisions.
+4. Before formal planning or high-confidence claims, build an independent reference sample, produce a locally appropriate Landsat classification, and report accuracy and area uncertainty.
+5. Do not infer causes of a change from this descriptive time series alone.
