@@ -1,0 +1,5 @@
+year,strict_complete_feature_pixels,strict_complete_feature_area_ha,strict_complete_feature_area_pct,classified_pixels,classified_area_ha,classified_area_pct_of_study_area,additional_pixels_mapped_using_partial_features,partial_support_mapping_rule
+2000,810734,72966.06,60.234198421595416,1301023,117092.06999999999,96.66065260993042,490289,at least 75% of predictors and at least 3 of 4 seasonal windows
+2010,774997,69749.73,57.579086450230506,1252603,112734.27,93.06324595426574,477606,at least 75% of predictors and at least 3 of 4 seasonal windows
+2020,578123,52031.07,42.9521587772167,1226285,110365.65,91.10792690503436,648162,at least 75% of predictors and at least 3 of 4 seasonal windows
+2025,668995,60209.55,49.703574258702886,1191463,107231.67,88.52079566662967,522468,at least 75% of predictors and at least 3 of 4 seasonal windows

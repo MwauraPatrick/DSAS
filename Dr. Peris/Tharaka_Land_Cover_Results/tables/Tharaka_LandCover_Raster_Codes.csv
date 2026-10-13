@@ -1,0 +1,5 @@
+raster_code,land_cover,crosswalk_status
+2,bushland,Provisional until independently reference-validated
+3,grassland,Provisional until independently reference-validated
+4,farmland,Provisional until independently reference-validated
+6,other_uncertain,Provisional until independently reference-validated

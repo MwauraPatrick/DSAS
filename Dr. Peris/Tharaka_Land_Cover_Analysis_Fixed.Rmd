@@ -6883,6 +6883,22 @@ The final chunk creates an auditable short note listing which classes crossed th
 # SECTION 37: DECISION-SUPPORT SCREENING NOTE
 # =========================================================
 
+# =========================================================
+# FIX: CONNECT SECTION 37 TO SECTION 35 OUTPUT
+# =========================================================
+
+if (!exists("decision_table", inherits = TRUE)) {
+  stop(
+    "decision_table is missing. Run Section 35 first."
+  )
+}
+
+# Use the decision table created by Section 35
+landcover_decision_summary <- decision_table
+
+# Flag changes of 2 percentage points or more
+decision_threshold_pp <- 2
+
 flagged_changes <- landcover_decision_summary %>%
   filter(abs(share_change_percentage_points) >= decision_threshold_pp)
 

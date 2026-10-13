@@ -1,0 +1,17 @@
+year,window,core_start,core_end,composite_file,exists,n_layers,x_resolution_m,y_resolution_m
+2000,dry_feb,2000-02-10,2000-02-20,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2000_dry_feb.tif,TRUE,6,30,30
+2000,dry_sep,2000-09-15,2000-09-25,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2000_dry_sep.tif,TRUE,6,30,30
+2000,wet_may,2000-05-05,2000-05-30,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2000_wet_may.tif,TRUE,6,30,30
+2000,wet_dec,2000-12-05,2000-12-30,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2000_wet_dec.tif,TRUE,6,30,30
+2010,dry_feb,2010-02-10,2010-02-20,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2010_dry_feb.tif,TRUE,6,30,30
+2010,dry_sep,2010-09-15,2010-09-25,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2010_dry_sep.tif,TRUE,6,30,30
+2010,wet_may,2010-05-05,2010-05-30,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2010_wet_may.tif,TRUE,6,30,30
+2010,wet_dec,2010-12-05,2010-12-30,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2010_wet_dec.tif,TRUE,6,30,30
+2020,dry_feb,2020-02-10,2020-02-20,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2020_dry_feb.tif,TRUE,6,30,30
+2020,dry_sep,2020-09-15,2020-09-25,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2020_dry_sep.tif,TRUE,6,30,30
+2020,wet_may,2020-05-05,2020-05-30,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2020_wet_may.tif,TRUE,6,30,30
+2020,wet_dec,2020-12-05,2020-12-30,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2020_wet_dec.tif,TRUE,6,30,30
+2025,dry_feb,2025-02-10,2025-02-20,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2025_dry_feb.tif,TRUE,6,30,30
+2025,dry_sep,2025-09-15,2025-09-25,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2025_dry_sep.tif,TRUE,6,30,30
+2025,wet_may,2025-05-05,2025-05-30,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2025_wet_may.tif,TRUE,6,30,30
+2025,wet_dec,2025-12-05,2025-12-30,C:/Users/pmwaura/DSAS/Dr. Peris/01_data/landsat/seasonal_composites_30m/Tharaka_Seasonal_2025_wet_dec.tif,TRUE,6,30,30

@@ -1,0 +1,18 @@
+item,value
+R Markdown directory,C:/Users/pmwaura/DSAS/Dr. Peris
+Study boundary source,Existing project boundary: Tharaka_SubCounty.shp
+Target CRS,EPSG:6933
+Target resolution (m),30
+Target years,"2000, 2010, 2020, 2025"
+Number of seasonal composites,16
+Number of pooled clusters,8
+Common valid-pixel mask,FALSE
+Minimum valid feature fraction,0.75
+Minimum seasonal windows required,3
+Minimum feature fraction within each season,0.75
+Maximum scenes per composite,4
+Requested window padding (days),32 days either side; retry ±64 days if needed
+QGIS version,3.44.15-Solothurn
+Primary imagery source,Microsoft Planetary Computer STAC: landsat-c2-l2
+Classification method,Pooled k-means on seasonal surface reflectance + indices
+Run time,2026-10-13 08:35:40.641524
